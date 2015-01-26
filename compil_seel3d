@@ -1,0 +1,1 @@
+ifort -O3 -i8 -r8 seel3d.f90 -o seel3d
