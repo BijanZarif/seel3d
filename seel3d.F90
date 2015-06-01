@@ -26,41 +26,6 @@ module mod_grille
   real :: time
 end module mod_grille
 !
-module ht_tools
-  use omp_lib
-  implicit none
-!#include "vt_user.inc"
-  integer :: nt,mid
-  integer,pointer :: step(:)
-contains
-
-subroutine start_WIP(step,id,rank)
-implicit none
-integer,intent(inout),pointer :: step(:)
-integer,intent(in) :: id,rank
-
-if(.not.maxval(step)>id) then
- step(rank)=-id
-endif
-
-end subroutine start_WIP
-
-subroutine end_WIP(step,id,rank)
-implicit none
-integer,intent(inout),pointer :: step(:)
-integer,intent(in) :: id,rank
-
-step(rank)=id+1
-
-if(minval(step)>-id) then
- step(rank)=id+2
-endif
-do while(maxval(step)<id+2) ; enddo
-
-end subroutine end_WIP
-
-end module ht_tools
-
 module mod_scheme
   implicit none
   real a(-3:3),a24(7),a15(7),a06(7)
@@ -168,7 +133,7 @@ integer :: Time_1,clock_rate,Time_2
   call coeff_schemas
   call maillage
   call ecoulmoyen
-  call pastemps(deltat)
+  call pastemps
   call affichage
   !
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
@@ -256,9 +221,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=101
-     ny=101
-     nz=101
+     nx=51!101
+     ny=51!101
+     nz=51!101
      ntfin=200
      record_step=500
      mo=0.5
@@ -510,7 +475,7 @@ end subroutine ecoulmoyen
 !
 !******************************************************************
 !******************************************************************
-pure subroutine pastemps(newdeltat)
+ subroutine pastemps
   !
   ! Calcul du pas de temps (critere cfl)
   !
@@ -520,7 +485,6 @@ pure subroutine pastemps(newdeltat)
   use mod_grille
   use mod_options
   implicit none
-  real,intent(out) ::newdeltat
   real :: uopmax,vopmax,dxmin,dxmax,dymin,dymax
   real :: wopmax,dzmin,dzmax
   integer :: x,y,z
@@ -551,7 +515,7 @@ pure subroutine pastemps(newdeltat)
      end do
   end do
   !
-  newdeltat=CFL*min(dxmin/uopmax,dymin/vopmax,dzmin/wopmax)
+  deltat=CFL*min(dxmin/uopmax,dymin/vopmax,dzmin/wopmax)
 
 end subroutine pastemps
 !******************************************************************
@@ -572,30 +536,28 @@ subroutine integ
   use mod_condlim
   use mod_vectors
   use mod_record
-  use ht_tools
+  use mod_filtrage
+#ifdef _OPENMP
+  use omp_lib
+#endif
   implicit none
-  integer :: itime,irk,x,y,z,j,ht_rank
+  integer :: itime,irk,x,y,z,j,nt
   !
   !
   call sauveparametre
   !
-!$OMP PARALLEL !default(none) private(ht_rank,time,nt,x,y,z,irk) &
-!!$OMP shared(step,nx,ny,nz,nt0,ntfin,nrk,ibc_right,ut,o_damping,o_damping_sup,un,u) &
-!!$OMP shared(XFMIN_X,XFMIN_y,XFMIN_z,yFMIN_X,yFMIN_y,yFMIN_z,zFMIN_X,zFMIN_y,zFMIN_z) &
-!!$OMP shared(XFMax_X,XFMax_y,XFMax_z,yFMax_X,yFMax_y,yFMax_z,zFMax_X,zFMax_y,zFMax_z) &
-!!$OMP shared(deltat) 
-
+!$OMP PARALLEL
+#ifdef _OPENMP
 nt=OMP_get_num_threads()
-ht_rank=OMP_get_thread_num()
 !$OMP single
 print*, "Nombre de Thread : ",nt
-allocate (step(0:nt-1))
-step=0
 !$OMP end single
+#endif
 
-!$OMP DO SCHEDULE(static)
+!$OMP DO SCHEDULE(static) collapse(1)
   do z=-2,nz+3
      do y=-2,ny+3
+!$OMP SIMD
         do x=-2,nx+3
         Un(:,x,y,z)=U(:,x,y,z)
 enddo
@@ -610,12 +572,9 @@ enddo
      call record(itime)           
      do irk=1,nrk
 
-!        call start_WIP(step,10*irk,ht_rank)
         call ts(irk)                ! calcul de S
         call fluxes                 ! Un -> E,F,G,H
-!        call end_WIP(step,10*irk,ht_rank)
-!!$OMP BARRIER
-!        call start_WIP(step,10*irk+4,ht_rank)
+
         call ptsint(irk)            ! U +      E,F,G,H,S -> Ut
         !// FACES                   ! U + Un + E,F,G,H,S -> Ut
         call ptsright(irk,ibc_right)
@@ -646,13 +605,11 @@ enddo
         call pts_c_topleftback(irk)
         call pts_c_bottomleftfront(irk)
         call pts_c_bottomleftback(irk)
-!        call end_WIP(step,10*irk+4,ht_rank)
-!!$OMP BARRIER
-
 
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
+!$OMP SIMD
         do x=-2,nx+3
         Un(:,x,y,z)=Ut(:,x,y,z)
 enddo
@@ -662,14 +619,13 @@ enddo
 !$OMP BARRIER
      end do
 
-!step=0
-
      if (o_damping) then
         call filtrage8x          !!rem: entree Ut --> sortie: Un
 !$OMP BARRIER
 !$OMP DO SCHEDULE(static)  collapse(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
+!$OMP SIMD
         do x=xfmin_x,xfmax_x
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -682,6 +638,7 @@ enddo
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=yfmin_y,yfmax_y
+!$OMP SIMD
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -694,6 +651,7 @@ enddo
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_z,zfmax_z
      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
         do x=xfmin_z,xfmax_z
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -712,6 +670,7 @@ enddo
 !$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
+!$OMP SIMD
         do x=-2,nx+3
         U(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -1010,9 +969,10 @@ subroutine set_champ(itime)
   !!///// Pulse de pression
   if (itime.eq.0) then
      if (icas==100) then
-!$OMP DO SCHEDULE(static) 
+!$OMP DO SCHEDULE(static)
         do z=1,nz
            do y=1,ny
+!$OMP SIMD private (arg)
               do x=1,nx
                  arg = (xg(x)+0.)**2 + yg(y)**2 + zg(z)**2
                  U(1,x,y,z) = amp * exp( - alpha*arg )
@@ -1025,6 +985,7 @@ subroutine set_champ(itime)
 !$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
+!$OMP SIMD
         do x=-2,nx+3
         Un(:,x,y,z)=U(:,x,y,z)
 enddo
@@ -1061,6 +1022,7 @@ subroutine ptsint(irk)
 !$OMP DO SCHEDULE(static) collapse(2)
      do z=1,nz
         do y=1,ny
+!$OMP SIMD private(ddx,ddy,ddz,cc)
            do x=1,nx
               DDx = a(3)*(E(:,x+3,y,z) - E(:,x-3,y,z))    &
                    +a(2)*(E(:,x+2,y,z) - E(:,x-2,y,z))    &
@@ -4010,18 +3972,20 @@ subroutine filtragex_sup
   !
   !
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
+!$OMP SIMD
         do x=-2,1
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
 enddo
 enddo
 !$OMP END do nowait
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
+!$OMP SIMD
         do x=nx,nx+3
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -4167,6 +4131,7 @@ subroutine filtragey_sup
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=-2,1
+!$OMP SIMD
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -4176,6 +4141,7 @@ enddo
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=ny,ny+3
+!$OMP SIMD
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -4316,25 +4282,27 @@ subroutine filtragez_sup
   !
   !
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=-2,1
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP END do nowait
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=nz,nz+3
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP END do nowait
-!$OMP BARRIER
+!!$OMP DO SCHEDULE(static) collapse(2)
+!  do z=-2,1
+!     do y=yfmin_z,yfmax_z
+!!$OMP SIMD
+!        do x=xfmin_z,xfmax_z
+!        Ut(:,x,y,z)=Un(:,x,y,z)
+!enddo
+!enddo
+!enddo
+!!$OMP END do nowait
+!!$OMP DO SCHEDULE(static) collapse(2)
+!  do z=nz,nz+3
+!     do y=yfmin_z,yfmax_z
+!!$OMP SIMD
+!        do x=xfmin_z,xfmax_z
+!        Ut(:,x,y,z)=Un(:,x,y,z)
+!enddo
+!enddo
+!enddo
+!!$OMP END do nowait
+!!$OMP BARRIER
 end subroutine filtragez_sup
 !******************************************************************
 !
@@ -4357,6 +4325,7 @@ subroutine fluxes
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
+!$OMP SIMD
         do x=-2,nx+3
   E(1,x,y,z) = uo(x,y,z)*Un(1,x,y,z)+Un(2,x,y,z)
   E(2,x,y,z) = uo(x,y,z)*Un(2,x,y,z)+Un(5,x,y,z)
@@ -4425,6 +4394,7 @@ subroutine ts(irk)
 !$OMP DO SCHEDULE(static)
      do z=-2,nz+3
         do y=-2,ny+3
+!$OMP SIMD
            do x=-2,nx+3   
               S(1,x,y,z) = amp * sin(omega*(time+ck(irk)*deltat)) &
                                * exp(-alpha*(xg(x)**2 + yg(y)**2 + zg(z)**2))                
@@ -5008,9 +4978,10 @@ subroutine calculvort
   !
   !
   VORT=0.
-!$OMP DO SCHEDULE(static) 
+!$OMP DO SCHEDULE(static)
   do z=1,nz
      do y=1,ny
+!$OMP SIMD
         do x=1,nx
            do j=-3,3
               VORT(1,x,y,z) = VORT(1,x,y,z) + dyg(y)*a(j)*U(4,x,y+j,z)          &
@@ -5223,4 +5194,5 @@ subroutine coeff_schemas
   !
 end subroutine coeff_schemas
 !******************************************************************
+
 
