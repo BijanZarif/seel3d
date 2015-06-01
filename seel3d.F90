@@ -137,19 +137,19 @@ integer :: Time_1,clock_rate,Time_2
   call inivar
   call ecoulmoyen
   call pastemps
-!$OMP single
+!$OMP SINGLE
   call affichage
   !
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
   call system_clock(Time_1,clock_rate)
-!$OMP end single
+!$OMP END SINGLE NOWAIT
   call integ
-!$OMP single
+!$OMP SINGLE
   CALL system_clock(Time_2)
   print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate
   call record_for_restart 
   write(6,*) '////////////////////////// FIN PROGRAMME ///////////////////////////'
-!$OMP end single
+!$OMP END SINGLE NOWAIT
 !$OMP end parallel  
   call closevar
   !
@@ -229,9 +229,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=26!101
-     ny=26!101
-     nz=26!101
+     nx=101
+     ny=101
+     nz=101
      ntfin=200
      record_step=500
      mo=0.5
@@ -384,109 +384,108 @@ subroutine ecoulmoyen
   !
   !///// ECOULEMENT MOYEN SI NECESSAIRE PAR DEFAUT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     rhoo(:,:,z)=1./1.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     uo(:,:,z)=mo
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     vo(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     wo(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     po(:,:,z)=1./gamma
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     coo(:,:,z)=1.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     duox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     duoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     duoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     dvox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dvoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dvoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     dwox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dwoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dwoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     dpox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dpoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dpoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO 
   !
   !
   !///// CALCUL NUMERIQUE DES GRADIENTS MOYENS
   !             (en chantier...)
   !
-!$OMP BARRIER
   if (gradient) then
      write(6,*) ' .. calcul numerique des gradients de vitesse '
-!$OMP DO
+!$OMP DO COLLAPSE(2)
            do z=1,nz
         do y=1,ny
      do x=1,nx
@@ -506,7 +505,7 @@ enddo
            end do
         end do
      end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
      !
 !$OMP DO
            do z=1,nz
@@ -526,7 +525,7 @@ enddo
            end do
         end do
      end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
      !
 !$OMP DO
            do z=1,nz
@@ -547,8 +546,7 @@ enddo
            end do
         end do
      end do
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 
   end if
   !
@@ -573,7 +571,6 @@ end subroutine ecoulmoyen
   implicit none
   real :: uopmax,vopmax,dxmin,dxmax,dymin,dymax
   real :: wopmax,dzmin,dzmax
-  integer :: x,y,z
   !
   !
   dzmin = minval( zg(-1:nz+3)-zg(-2:nz+2) )
@@ -614,35 +611,35 @@ subroutine integ
   use omp_lib
 #endif
   implicit none
-  integer :: itime,irk,x,y,z,j,nt
+  integer :: itime,irk,z,nt
   !
   !
+!$OMP SINGLE
   call sauveparametre
+!$OMP END SINGLE NOWAIT
   !
 
 !/// NON NECESSAIRE
 #ifdef _OPENMP
 nt=OMP_get_num_threads()
-!$OMP single
+!$OMP SINGLE
 print*, "Nombre de Thread : ",nt
-!$OMP end single
+!$OMP END SINGLE
 #endif
 !/// NON NECESSAIRE
 
 
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     Un(:,:,:,z)=U(:,:,:,z)
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
   !
   do itime=nt0,ntfin
 
      call set_champ(itime) 
      call record(itime)           
      do irk=1,nrk
-
          call ts(irk)
          call fluxes
          call ptsint(irk)
@@ -676,13 +673,11 @@ enddo
 	 call pts_c_bottomleftfront(irk)
 	 call pts_c_bottomleftback(irk)
 !
-!$OMP BARRIER
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     Un(:,:,:,z)=Ut(:,:,:,z)
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
      end do
 
      if (o_damping) then
@@ -700,13 +695,12 @@ enddo
   do z=-2,nz+3
     U(:,:,:,z)=Un(:,:,:,z)
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
      time=time+deltat
   end do
-!$OMP single
+!$OMP SINGLE
   print*,U(:,5,5,5)
-!$OMP end single
+!$OMP END SINGLE NOWAIT
   !
   !
 end subroutine integ
@@ -739,114 +733,114 @@ subroutine inivar
   !
   ! 
   if(o_record_vort) then
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     VORT(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   end if
   !
   !
   !///// INITIALISATION ECOULEMENT MOYEN
   !
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     duox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     duoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     duoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     dvox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dvoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dvoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     dwox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dwoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dwoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     dpox(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dpoy(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     dpoz(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     rhoo(:,:,z)=HUGE(1.)
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     uo(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     vo(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     wo(:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     po(:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
   !
   !///// INITIALISATION DES TABLEAUX DE VARIABLES
   !
   !
   if(o_restart) then
-!OMP single
+!$OMP SINGLE
      write(6,*) '***'
      write(6,*) '*** LECTURE D''UN FICHIER RESTART ***'
      write(6,*) '***'
@@ -869,99 +863,99 @@ enddo
      read(507) read_dummy
      write(6,*) '   check: read_dummy=', read_dummy
      close(507)
-!OMP end single
+!$OMP END SINGLE
      !
      irun=irun_save+1
      nt0=ntfin_save+1
      ntfin=ntfin+ntfin_save+1
      irecord=irecord_save
      time=time_save
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     Un(:,:,:,z)=U(:,:,:,z)
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     Ut(:,:,:,z)=U(:,:,:,z)
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     E(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     F(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     G(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     H(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     S(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 27   format(A39,I4)
-!OMP single
+!$OMP SINGLE
      write(6,27) ' Numero pas temporel debut       nt0 = ',nt0
      write(6,27) ' Numero pas temporel fin       ntfin = ',ntfin
      write(6,27) ' Numero pas temporel fin        irun = ',irun
      write(6,*) '***'
      write(6,*) '***'
-!OMP end single
+!$OMP END SINGLE NOWAIT
   else
      nt0=0
      time=0
-!$OMP DO  
+!$OMP DO 
   do z=-2,nz+3
     U(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     Un(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     Ut(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     E(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     F(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     G(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     H(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
-!$OMP DO  
+!$OMP END DO NOWAIT
+!$OMP DO 
   do z=-2,nz+3
     S(:,:,:,z)=0.
 enddo
-!$OMP end DO nowait
+!$OMP END DO
 
   endif
   !
@@ -984,7 +978,6 @@ enddo
   yrect(2)=ny
   zrect(2)=nz
 
-!$OMP BARRIER
   !
   !
 end subroutine inivar
@@ -1009,9 +1002,6 @@ subroutine allocvar
   use mod_record
   use mod_grille
   implicit none
-  integer :: x,y,z
-  integer :: nt0_save, ntfin_save, irun_save, irecord_save
-  real :: time_save
   !
   !
   !///// ALLOCATIONS MEMOIRE
@@ -1169,10 +1159,10 @@ subroutine set_champ(itime)
   !!///// Pulse de pression
   if (itime.eq.0) then
      if (icas==100) then
-!$OMP DO  
+!$OMP DO COLLAPSE(2)
         do z=1,nz
            do y=1,ny
-!$OMP SIMD private(arg)
+!$OMP SIMD PRIVATE(arg)
               do x=1,nx
                  arg = (xg(x)+0.)**2 + yg(y)**2 + zg(z)**2
                  U(1,x,y,z) = amp * exp( - alpha*arg )
@@ -1180,14 +1170,12 @@ subroutine set_champ(itime)
               end do
            end do
         end do
-!$OMP end DO nowait
-!$OMP BARRIER 
+!$OMP END DO  
 !$OMP DO 
   do z=-2,nz+3
         Un(:,:,:,z)=U(:,:,:,z)
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
      end if
   end if
   !
@@ -1211,10 +1199,10 @@ subroutine ptsint(irk)
   real :: CC,DDx,DDy,DDz
   integer :: irk,x,y,z,i
   !
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
      do z=1,nz
         do y=1,ny
-!$OMP SIMD private(ddx,ddy,ddz,cc)
+!$OMP SIMD PRIVATE(ddx,ddy,ddz,cc)
            do x=1,nx
              do i=1,5
               DDx = a(3)*(E(i,x+3,y,z) - E(i,x-3,y,z))    &
@@ -1235,7 +1223,7 @@ subroutine ptsint(irk)
            end do
         end do
      end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   !
 end subroutine ptsint
 !******************************************************************
@@ -1253,11 +1241,11 @@ subroutine ptsright(irk,ibc)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,ibc,i,j,x,y,z,k
+   integer :: irk,ibc,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1266,35 +1254,14 @@ dirz=0
 diry=0
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=1,ny
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=z
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1321,6 +1288,23 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
+
             if(ibc==1) then
                 DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
             elseif(ibc==2) then
@@ -1340,7 +1324,7 @@ dirx=1
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsright
 !******************************************************************
@@ -1359,11 +1343,11 @@ subroutine ptsleft(irk)
    use mod_onde
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
-   real :: DD(5),r,r2d,xc,yc,zc,vray,co,costheta,sintheta,sinphi,cosphi
+   integer :: irk,j,x,y,z,k
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1372,35 +1356,14 @@ dirz=0
 diry=0
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=1,ny
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=z
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1427,14 +1390,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsleft
 !******************************************************************
@@ -1452,11 +1431,11 @@ subroutine ptstop(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1465,35 +1444,14 @@ dirz=0
 diry=1
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=z
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1520,14 +1478,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 ! 
 end subroutine ptstop
 !******************************************************************
@@ -1545,11 +1519,11 @@ subroutine ptsbot(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1558,35 +1532,14 @@ dirz=0
 diry=-1
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=z
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1613,14 +1566,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 !
 end subroutine ptsbot
@@ -1639,11 +1608,11 @@ subroutine ptsback(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1652,35 +1621,14 @@ dirz=-1
 diry=0
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1707,14 +1655,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 !
 end subroutine ptsback
@@ -1733,11 +1697,11 @@ subroutine ptsfront(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1746,35 +1710,14 @@ dirz=1
 diry=0
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=nz
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1801,14 +1744,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsfront
 !******************************************************************
@@ -1827,11 +1786,11 @@ subroutine ptsbottomleft(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1840,35 +1799,14 @@ dirz=0
 diry=-1
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=-2,0
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=z
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1895,14 +1833,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsbottomleft
 !******************************************************************
@@ -1921,11 +1875,11 @@ subroutine ptsbottomback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -1934,35 +1888,14 @@ dirz=-1
 diry=-1
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1989,14 +1922,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsbottomback
 !******************************************************************
@@ -2015,11 +1964,11 @@ subroutine ptsleftback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
-   real ::DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   integer :: irk,j,x,y,z,k
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2028,35 +1977,14 @@ dirz=-1
 diry=0
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=1,ny
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2083,14 +2011,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsleftback
 !******************************************************************
@@ -2109,11 +2053,11 @@ subroutine ptstopright(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 
@@ -2123,35 +2067,14 @@ dirz=0
 diry=1
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=ny+1,ny+3
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=z
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2178,14 +2101,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptstopright
 !******************************************************************
@@ -2205,11 +2144,11 @@ subroutine ptsbottomright(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2218,35 +2157,14 @@ dirz=0
 diry=-1
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=-2,0
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=z
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2273,14 +2191,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsbottomright
 !******************************************************************
@@ -2299,11 +2233,11 @@ subroutine ptstopleft(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2312,35 +2246,14 @@ dirz=0
 diry=1
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=1,nz
        do y=ny+1,ny+3
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=z
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2367,14 +2280,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 !
 end subroutine ptstopleft
@@ -2394,11 +2323,11 @@ subroutine ptstopback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2407,35 +2336,14 @@ dirz=-1
 diry=1
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2462,14 +2370,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 !
 end subroutine ptstopback
@@ -2489,11 +2413,11 @@ subroutine ptsrightback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2502,35 +2426,14 @@ dirz=-1
 diry=0
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=1,ny
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2557,14 +2460,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsrightback
 !******************************************************************
@@ -2583,11 +2502,11 @@ subroutine ptsrightfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2596,35 +2515,14 @@ dirz=1
 diry=0
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=nz
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2651,14 +2549,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsrightfront
 !******************************************************************
@@ -2677,11 +2591,11 @@ subroutine ptsleftfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2690,35 +2604,14 @@ dirz=1
 diry=0
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=1,ny
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=nz
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2745,14 +2638,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsleftfront
 !******************************************************************
@@ -2771,11 +2680,11 @@ subroutine ptsbottomfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2784,35 +2693,14 @@ dirz=1
 diry=-1
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=nz
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2839,14 +2727,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !      
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptsbottomfront
 !******************************************************************
@@ -2865,11 +2769,11 @@ subroutine ptstopfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2878,35 +2782,14 @@ dirz=1
 diry=1
 dirx=0
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=1,nx
 
          z3=nz
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2933,14 +2816,30 @@ dirx=0
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine ptstopfront
 !******************************************************************
@@ -2959,11 +2858,11 @@ subroutine pts_c_bottomleftback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -2972,35 +2871,14 @@ dirz=-1
 diry=-1
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=-2,0
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3027,14 +2905,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
 	 end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO
 !
 end subroutine pts_c_bottomleftback
 !******************************************************************
@@ -3053,11 +2947,11 @@ subroutine pts_c_bottomrightback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3066,35 +2960,14 @@ dirz=-1
 diry=-1
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=-2,0
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3121,14 +2994,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_bottomrightback
 !******************************************************************
@@ -3147,11 +3036,11 @@ subroutine pts_c_toprightback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3160,35 +3049,14 @@ dirz=-1
 diry=1
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=ny+1,ny+3
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3215,14 +3083,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_toprightback
 !******************************************************************
@@ -3241,11 +3125,11 @@ subroutine pts_c_topleftback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3254,35 +3138,14 @@ dirz=-1
 diry=1
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=-2,0
        do y=ny+1,ny+3
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3309,14 +3172,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
 	    end do
           end do
         end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_topleftback
 !******************************************************************
@@ -3335,11 +3214,11 @@ subroutine pts_c_bottomleftfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3348,35 +3227,14 @@ dirz=1
 diry=-1
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=-2,0
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=nz
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3403,14 +3261,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_bottomleftfront
 !******************************************************************
@@ -3429,11 +3303,11 @@ subroutine pts_c_bottomrightfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3442,35 +3316,15 @@ dirz=1
 diry=-1
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=-2,0
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd)
+!!$OMP SIMD PRIVATE(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd)
          do x=nx+1,nx+3
 
          z3=nz
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3497,14 +3351,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_bottomrightfront
 !******************************************************************
@@ -3523,11 +3393,11 @@ subroutine pts_c_toprightfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3536,35 +3406,14 @@ dirz=1
 diry=1
 dirx=1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=nz
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3591,14 +3440,30 @@ dirx=1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_toprightfront
 !******************************************************************
@@ -3617,11 +3482,11 @@ subroutine pts_c_topleftfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z,k
+   integer :: irk,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+  integer :: dirx,diry,dirz,x3,y3,z3
 !
 !
 !
@@ -3630,35 +3495,14 @@ dirz=1
 diry=1
 dirx=-1
 
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
-!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=nz
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
-
-         do k=1,5
-           Dx(k)=0.
-           Dy(k)=0.
-           Dz(k)=0.
-         enddo
-
-           do j=-3,3
-         do k=1,5
-             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
-             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
-             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
-         enddo
-           enddo
-
-         do k=1,5
-           Dx(k) = Dx(k)* dxg(x)
-           Dy(k) = Dy(k)* dyg(y)
-           Dz(k) = Dz(k)* dxg(z)
-         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3685,14 +3529,30 @@ dirx=-1
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!$OMP SIMD
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
+
+           do j=-3,3
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+           enddo
+
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+           DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+         enddo
 !
          end do
       end do
    end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
 !
 end subroutine pts_c_topleftfront
 !******************************************************************
@@ -3711,13 +3571,13 @@ subroutine filtrage8x
    use mod_vectors
    use mod_scheme
    implicit none
-   integer :: x,y,z,i,j
+   integer :: x,y,z
 !
 !
 !///// FILTRAGE EN X DES POINTS INTERIEURS
 !
 !
-!$OMP DO  collapse(3)
+!$OMP DO COLLAPSE(3)
       do z=zfmin_x,zfmax_x
          do y=yfmin_x,yfmax_x
             do x=xfmin_x,xfmax_x
@@ -3730,9 +3590,8 @@ subroutine filtrage8x
          end do
       end do
    end do
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO   collapse(2)
+!$OMP END DO 
+!$OMP DO COLLAPSE(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
 !$OMP SIMD
@@ -3741,8 +3600,7 @@ subroutine filtrage8x
 enddo
 enddo
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 !
 !
 end subroutine filtrage8x
@@ -3762,13 +3620,13 @@ subroutine filtrage8y
    use mod_vectors
    use mod_scheme
    implicit none
-   integer :: x,y,z,i,j
+   integer :: x,y,z
 !
 !
 !///// FILTRAGE EN Y DES POINTS INTERIEURS
 !
 !
-!$OMP DO  collapse(3)
+!$OMP DO COLLAPSE(3)
       do z=zfmin_y,zfmax_y
          do y=yfmin_y,yfmax_y
             do x=xfmin_y,xfmax_y
@@ -3781,9 +3639,8 @@ subroutine filtrage8y
          end do
       end do
    end do
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO  collapse(2)
+!$OMP END DO 
+!$OMP DO COLLAPSE(2)
   do z=zfmin_y,zfmax_y
      do y=yfmin_y,yfmax_y
 !$OMP SIMD 
@@ -3792,8 +3649,7 @@ subroutine filtrage8y
 enddo
 enddo
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 !
 !
 end subroutine filtrage8y
@@ -3813,13 +3669,13 @@ subroutine filtrage8z
    use mod_vectors
    use mod_scheme
    implicit none
-   integer :: x,y,z,i,j
+   integer :: x,y,z
 !
 !
 !///// FILTRAGE EN Z DES POINTS INTERIEURS
 !
 !
-!$OMP DO  collapse(3)
+!$OMP DO COLLAPSE(3)
       do z=zfmin_z,zfmax_z
          do y=yfmin_z,yfmax_z
             do x=xfmin_z,xfmax_z
@@ -3832,9 +3688,8 @@ subroutine filtrage8z
          end do
       end do
    end do
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO  collapse(2)
+!$OMP END DO 
+!$OMP DO COLLAPSE(2)
   do z=zfmin_z,zfmax_z
      do y=yfmin_z,yfmax_z
 !$OMP SIMD 
@@ -3843,8 +3698,7 @@ subroutine filtrage8z
 enddo
 enddo
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 !
 !
 end subroutine filtrage8z
@@ -3864,11 +3718,11 @@ subroutine filtragex_sup
    use mod_vectors
    use mod_scheme
    implicit none
-   integer :: x,y,z,i,j
+   integer :: x,y,z,i
 !
 !
 
-!$OMP DO  !collapse(2)
+!$OMP DO
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3916,9 +3770,8 @@ subroutine filtragex_sup
       end do
       end do
    end do
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO  collapse(2)
+!$OMP END DO 
+!$OMP DO COLLAPSE(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
 !!$OMP SIMD 
@@ -3931,8 +3784,7 @@ enddo
 enddo
 enddo
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 !
 !
 end subroutine filtragex_sup
@@ -3952,14 +3804,14 @@ subroutine filtragey_sup
    use mod_vectors
    use mod_scheme
    implicit none
-   integer :: x,y,z,i,j
+   integer :: x,y,z,i
 !
 !
 
 !
 !
 
-!$OMP DO  !collapse(2)
+!$OMP DO
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -4005,9 +3857,8 @@ subroutine filtragey_sup
       end do
       end do
    end do
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO  collapse(2)
+!$OMP END DO 
+!$OMP DO COLLAPSE(2)
   do z=zfmin_y,zfmax_y
      do y=-2,1
 !$OMP SIMD 
@@ -4022,8 +3873,7 @@ enddo
 enddo
 enddo
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 !
 !
 end subroutine filtragey_sup
@@ -4043,14 +3893,14 @@ subroutine filtragez_sup
    use mod_vectors
    use mod_scheme
    implicit none
-   integer :: x,y,z,i,j
+   integer :: x,y,z,i
 !
 !
 
 !
 !
 
-!$OMP DO  !collapse(2)
+!$OMP DO
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4097,8 +3947,7 @@ subroutine filtragez_sup
       end do
       end do
    end do
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 !
 !
 end subroutine filtragez_sup
@@ -4120,7 +3969,7 @@ subroutine fluxes
   integer :: x,y,z
   !
   !
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
   do z=-2,nz+3
      do y=-2,ny+3
 !$OMP SIMD 
@@ -4162,8 +4011,7 @@ subroutine fluxes
 enddo
 enddo
 enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
 end subroutine fluxes
 !******************************************************************
 !
@@ -4189,7 +4037,7 @@ subroutine ts(irk)
   !
   !!///// Monopole avec ou sans ecoulement
   if (icas==120) then
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
      do z=-2,nz+3
         do y=-2,ny+3
 !$OMP SIMD 
@@ -4200,7 +4048,7 @@ subroutine ts(irk)
            end do
         end do
      end do
-!$OMP end DO nowait
+!$OMP END DO NOWAIT
   end if
   !
   !
@@ -4565,7 +4413,7 @@ subroutine record(itime)
   end if
   !
   !
-!$OMP END SECTIONS nowait
+!$OMP END SECTIONS NOWAIT
   if (mod(itime,record_step).eq.0) irecord=irecord+1
 end subroutine record
 !******************************************************************
@@ -4775,7 +4623,7 @@ subroutine calculvort
   integer :: x,y,z,j
   !
   !
-!$OMP DO  collapse(2)
+!$OMP DO COLLAPSE(2)
   do z=1,nz
      do y=1,ny
         do x=1,nx
@@ -4791,8 +4639,7 @@ subroutine calculvort
         end do
      end do
   end do
-!$OMP end DO nowait
-!$OMP BARRIER
+!$OMP END DO 
   !
   !
 end subroutine calculvort
