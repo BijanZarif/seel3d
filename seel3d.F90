@@ -546,7 +546,7 @@ subroutine integ
   !
   call sauveparametre
   !
-!$OMP PARALLEL
+!$OMP PARALLEL 
 #ifdef _OPENMP
 nt=OMP_get_num_threads()
 !$OMP single
@@ -557,13 +557,13 @@ print*, "Nombre de Thread : ",nt
 !$OMP DO SCHEDULE(static) collapse(1)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD
+!$OMP SIMD 
         do x=-2,nx+3
         Un(:,x,y,z)=U(:,x,y,z)
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
   !
   do itime=nt0,ntfin
@@ -605,22 +605,23 @@ enddo
         call pts_c_topleftback(irk)
         call pts_c_bottomleftfront(irk)
         call pts_c_bottomleftback(irk)
-
+!
+!$OMP BARRIER
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD
+!$OMP SIMD 
         do x=-2,nx+3
         Un(:,x,y,z)=Ut(:,x,y,z)
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
      end do
 
      if (o_damping) then
-        call filtrage8x          !!rem: entree Ut --> sortie: Un
+         call filtrage8x          !!rem: entree Ut --> sortie: Un
 !$OMP BARRIER
 !$OMP DO SCHEDULE(static)  collapse(2)
   do z=zfmin_x,zfmax_x
@@ -631,22 +632,22 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
-        call filtrage8y          !!rem: entree Ut --> sortie: Un
+         call filtrage8y          !!rem: entree Ut --> sortie: Un
 !$OMP BARRIER
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=yfmin_y,yfmax_y
-!$OMP SIMD
+!$OMP SIMD 
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
-        call filtrage8z          !!rem: entree Ut --> sortie: Un 
+         call filtrage8z          !!rem: entree Ut --> sortie: Un 
 !$OMP BARRIER
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_z,zfmax_z
@@ -657,26 +658,72 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
         !
         if(o_damping_sup) then
            call filtragex_sup
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(2)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+!$OMP SIMD 
+        do x=-2,1
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(2)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+!$OMP SIMD 
+        do x=nx,nx+3
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
            call filtragey_sup
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(2)
+  do z=zfmin_y,zfmax_y
+     do y=-2,1
+!$OMP SIMD 
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(2)
+  do z=zfmin_y,zfmax_y
+     do y=ny,ny+3
+!$OMP SIMD 
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
            call filtragez_sup
         end if
      end if
-
+!$OMP BARRIER
 !$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD
+!$OMP SIMD 
         do x=-2,nx+3
         U(:,x,y,z)=Un(:,x,y,z)
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
      time=time+deltat
   end do
@@ -969,10 +1016,10 @@ subroutine set_champ(itime)
   !!///// Pulse de pression
   if (itime.eq.0) then
      if (icas==100) then
-!$OMP DO SCHEDULE(static)
+!$OMP DO SCHEDULE(static) 
         do z=1,nz
            do y=1,ny
-!$OMP SIMD private (arg)
+!$OMP SIMD private(arg)
               do x=1,nx
                  arg = (xg(x)+0.)**2 + yg(y)**2 + zg(z)**2
                  U(1,x,y,z) = amp * exp( - alpha*arg )
@@ -980,18 +1027,18 @@ subroutine set_champ(itime)
               end do
            end do
         end do
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER 
 !$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD
+!$OMP SIMD 
         do x=-2,nx+3
         Un(:,x,y,z)=U(:,x,y,z)
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
      end if
   end if
@@ -1041,111 +1088,114 @@ subroutine ptsint(irk)
            end do
         end do
      end do
-!$OMP END DO nowait
+!$OMP end DO nowait
   !
 end subroutine ptsint
 !******************************************************************
 !
 !
 !
-
+!
 !******************************************************************
 !******************************************************************
 subroutine ptsright(irk,ibc)
-  !
-  !***** Traitement des points de la face droite (x>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,ibc,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,1:ny,1:nz,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,1:ny,1:nz) = Dx(:,nx+1,1:ny,1:nz) - a24(3-j)*Un(:,nx+1+j,1:ny,1:nz)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,1:ny,1:nz) = Dx(:,nx+2,1:ny,1:nz) - a15(2-j)*Un(:,nx+2+j,1:ny,1:nz)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,1:ny,1:nz) = Dx(:,nx+3,1:ny,1:nz) - a06(1-j)*Un(:,nx+3+j,1:ny,1:nz)
-  end do
-  !
-  do y=1,ny
-     Dy(:,nx+1:nx+3,y,1:nz) = a(3)*(Un(:,nx+1:nx+3,y+3,1:nz) - Un(:,nx+1:nx+3,y-3,1:nz)) &
-          +a(2)*(Un(:,nx+1:nx+3,y+2,1:nz) - Un(:,nx+1:nx+3,y-2,1:nz)) &
-          +a(1)*(Un(:,nx+1:nx+3,y+1,1:nz) - Un(:,nx+1:nx+3,y-1,1:nz))
-  end do
-  !
-  do z=1,nz
-     Dz(:,nx+1:nx+3,1:ny,z) = a(3)*(Un(:,nx+1:nx+3,1:ny,z+3) - Un(:,nx+1:nx+3,1:ny,z-3)) &
-          +a(2)*(Un(:,nx+1:nx+3,1:ny,z+2) - Un(:,nx+1:nx+3,1:ny,z-2)) &
-          +a(1)*(Un(:,nx+1:nx+3,1:ny,z+1) - Un(:,nx+1:nx+3,1:ny,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=1,ny
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           if(ibc==1) then
-              do i=1,5
-                 DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
-              end do
-           elseif(ibc==2) then
-              DD(5) = vray * (xc*Dx(5,x,y,z) + yc*Dy(5,x,y,z)  + zc*Dz(5,x,y,z)  + Un(5,x,y,z)/r)
-              DD(2) = uo(x,y,z) * Dx(2,x,y,z) + vo(x,y,z)*Dy(2,x,y,z) + wo(x,y,z)*Dz(2,x,y,z) + Dx(5,x,y,z)*rhoo(x,y,z)
-              DD(3) = uo(x,y,z) * Dx(3,x,y,z) + vo(x,y,z)*Dy(3,x,y,z) + wo(x,y,z)*Dz(3,x,y,z) + Dy(5,x,y,z)*rhoo(x,y,z)
-              DD(4) = uo(x,y,z) * Dx(4,x,y,z) + vo(x,y,z)*Dy(4,x,y,z) + wo(x,y,z)*Dz(4,x,y,z) + Dz(5,x,y,z)*rhoo(x,y,z)
-              DD(1) = uo(x,y,z) * Dx(1,x,y,z) + vo(x,y,z)*Dy(1,x,y,z) + wo(x,y,z)*Dz(1,x,y,z) &
-                   + ( DD(5) - uo(x,y,z) * Dx(5,x,y,z) - vo(x,y,z)*Dy(5,x,y,z) - wo(x,y,z)*Dz(5,x,y,z) ) / coo(x,y,z)**2
-           end if
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END DO nowait
-  !
+!
+!***** Traitement des points de la face droite (x>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_vectors
+   implicit none
+   integer :: irk,ibc,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
+
+dirz=0
+diry=0
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=z
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+            if(ibc==1) then
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+            elseif(ibc==2) then
+               DD(5) = vray * (xc*Dx(5) + yc*Dy(5)  + zc*Dz(5)  + Un(5,x,y,z)*r)
+               DD(2) = uo(x,y,z) * Dx(2) + vo(x,y,z)*Dy(2) + wo(x,y,z)*Dz(2) + Dx(5)*rhoo(x,y,z)
+               DD(3) = uo(x,y,z) * Dx(3) + vo(x,y,z)*Dy(3) + wo(x,y,z)*Dz(3) + Dy(5)*rhoo(x,y,z)
+               DD(4) = uo(x,y,z) * Dx(4) + vo(x,y,z)*Dy(4) + wo(x,y,z)*Dz(4) + Dz(5)*rhoo(x,y,z)
+               DD(1) = uo(x,y,z) * Dx(1) + vo(x,y,z)*Dy(1) + wo(x,y,z)*Dz(1) &
+                     -(uo(x,y,z) * Dx(5) + vo(x,y,z)*Dy(5) + wo(x,y,z)*Dz(5) - DD(5) ) / coo(x,y,z)**2
+            end if
+!
+             Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsright
 !******************************************************************
 !
@@ -1155,95 +1205,95 @@ end subroutine ptsright
 !******************************************************************
 !******************************************************************
 subroutine ptsleft(irk)
-  !
-  !***** Traitement des points de la face gauche
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,j,x,y,z,i
-  real :: DD(5),r,r2d,xc,yc,zc,vray,co,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,1:ny,1:nz,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,1:ny,1:nz)  = Dx(:,0,1:ny,1:nz)  + a24(3+j)*Un(:,0+j,1:ny,1:nz)
-  end do
-  do j=-1,5
-     Dx(:,-1,1:ny,1:nz) = Dx(:,-1,1:ny,1:nz) + a15(2+j)*Un(:,-1+j,1:ny,1:nz)
-  end do
-  do j=0,6                                                     
-     Dx(:,-2,1:ny,1:nz) = Dx(:,-2,1:ny,1:nz) + a06(1+j)*Un(:,-2+j,1:ny,1:nz)
-  end do
-  !
-  do y=1,ny
-     Dy(:,-2:0,y,1:nz) = a(3) * (Un(:,-2:0,y+3,1:nz) - Un(:,-2:0,y-3,1:nz))   &
-          +a(2) * (Un(:,-2:0,y+2,1:nz) - Un(:,-2:0,y-2,1:nz))   &
-          +a(1) * (Un(:,-2:0,y+1,1:nz) - Un(:,-2:0,y-1,1:nz))
-  end do
-  !
-  do z=1,nz
-     Dz(:,-2:0,1:ny,z) = a(3) * (Un(:,-2:0,1:ny,z+3) - Un(:,-2:0,1:ny,z-3))   &
-          +a(2) * (Un(:,-2:0,1:ny,z+2) - Un(:,-2:0,1:ny,z-2))   &
-          +a(1) * (Un(:,-2:0,1:ny,z+1) - Un(:,-2:0,1:ny,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=1,ny
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc=xg(x)- xg(nxray)
-           yc=yg(y)- yg(nyray)
-           zc=zg(z)- zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END DO nowait
-!$OMP BARRIER
+!
+!***** Traitement des points de la face gauche
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_onde
+   use mod_vectors
+   implicit none
+   integer :: irk,j,x,y,z,i
+   real :: DD(5),r,r2d,xc,yc,zc,vray,co,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=0
+diry=0
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=z
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsleft
 !******************************************************************
 !
@@ -1253,94 +1303,94 @@ end subroutine ptsleft
 !******************************************************************
 !******************************************************************
 subroutine ptstop(irk)
-  !
-  !***** Traitement des points de la face haute
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,ny+1:ny+3,1:nz,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dy(:,1:nx,ny+1,1:nz) = Dy(:,1:nx,ny+1,1:nz) - a24(3-j)*Un(:,1:nx,ny+1+j,1:nz)
-  end do
-  do j=-5,1
-     Dy(:,1:nx,ny+2,1:nz) = Dy(:,1:nx,ny+2,1:nz) - a15(2-j)*Un(:,1:nx,ny+2+j,1:nz)
-  end do
-  do j=-6,0
-     Dy(:,1:nx,ny+3,1:nz) = Dy(:,1:nx,ny+3,1:nz) - a06(1-j)*Un(:,1:nx,ny+3+j,1:nz)
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,ny+1:ny+3,1:nz) = a(3)*(Un(:,x+3,ny+1:ny+3,1:nz)-Un(:,x-3,ny+1:ny+3,1:nz))  &
-          +a(2)*(Un(:,x+2,ny+1:ny+3,1:nz)-Un(:,x-2,ny+1:ny+3,1:nz))  &
-          +a(1)*(Un(:,x+1,ny+1:ny+3,1:nz)-Un(:,x-1,ny+1:ny+3,1:nz))
-  end do
-  !
-  do z=1,nz
-     Dz(:,1:nx,ny+1:ny+3,z) = a(3)*(Un(:,1:nx,ny+1:ny+3,z+3)-Un(:,1:nx,ny+1:ny+3,z-3))  &
-          +a(2)*(Un(:,1:nx,ny+1:ny+3,z+2)-Un(:,1:nx,ny+1:ny+3,z-2))  &
-          +a(1)*(Un(:,1:nx,ny+1:ny+3,z+1)-Un(:,1:nx,ny+1:ny+3,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=ny+1,ny+3
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           r  = sqrt(xc**2 + yc**2 + zc**2)
-           r2d = sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi   = xc/r2d
-              sinphi   = yc/r2d
-           else                          !Dans ce cas d/dr=d/dz
-              cosphi=1                   !car alors r2d=0 et sintheta=0.
-              sinphi=1                   !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END DO nowait
-!$OMP BARRIER
+!
+!***** Traitement des points de la face haute
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  ! 
+dirz=0
+diry=1
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=z
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+! 
 end subroutine ptstop
 !******************************************************************
 !
@@ -1350,96 +1400,95 @@ end subroutine ptstop
 !******************************************************************
 !******************************************************************
 subroutine ptsbot(irk)
-  !
-  !***** Points de la face du bas
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,-2:0,1:nz,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dy(:,1:nx,0,1:nz) =  Dy(:,1:nx,0,1:nz)  + a24(3+j)*Un(:,1:nx,0+j,1:nz)
-  end do
-  do j=-1,5
-     Dy(:,1:nx,-1,1:nz) = Dy(:,1:nx,-1,1:nz) + a15(2+j)*Un(:,1:nx,-1+j,1:nz)
-  end do
-  do j=0,6
-     Dy(:,1:nx,-2,1:nz) = Dy(:,1:nx,-2,1:nz) + a06(1+j)*Un(:,1:nx,-2+j,1:nz)
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,-2:0,1:nz) = a(3)*(Un(:,x+3,-2:0,1:nz)-Un(:,x-3,-2:0,1:nz))  &
-          +a(2)*(Un(:,x+2,-2:0,1:nz)-Un(:,x-2,-2:0,1:nz))  &
-          +a(1)*(Un(:,x+1,-2:0,1:nz)-Un(:,x-1,-2:0,1:nz))
-  end do
-  !
-  do z=1,nz
-     Dz(:,1:nx,-2:0,z) = a(3)*(Un(:,1:nx,-2:0,z+3)-Un(:,1:nx,-2:0,z-3))  &
-          +a(2)*(Un(:,1:nx,-2:0,z+2)-Un(:,1:nx,-2:0,z-2))  &
-          +a(1)*(Un(:,1:nx,-2:0,z+1)-Un(:,1:nx,-2:0,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=-2,0
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc=xg(x)- xg(nxray)
-           yc=yg(y)- yg(nyray)
-           zc=zg(z)- zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de la face du bas
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
-  !
+dirz=0
+diry=-1
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=z
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine ptsbot
 !******************************************************************
 !
@@ -1449,96 +1498,95 @@ end subroutine ptsbot
 !******************************************************************
 !******************************************************************
 subroutine ptsback(irk)
-  !
-  !***** Points de la face arriere
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,1:ny,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dz(:,1:nx,1:ny,0) =  Dz(:,1:nx,1:ny,0)  + a24(3+j)*Un(:,1:nx,1:ny,0+j)
-  end do
-  do j=-1,5
-     Dz(:,1:nx,1:ny,-1) = Dz(:,1:nx,1:ny,-1) + a15(2+j)*Un(:,1:nx,1:ny,-1+j)
-  end do
-  do j=0,6
-     Dz(:,1:nx,1:ny,-2) = Dz(:,1:nx,1:ny,-2) + a06(1+j)*Un(:,1:nx,1:ny,-2+j)
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,1:ny,-2:0) = a(3)*(Un(:,x+3,1:ny,-2:0)-Un(:,x-3,1:ny,-2:0))  &
-          +a(2)*(Un(:,x+2,1:ny,-2:0)-Un(:,x-2,1:ny,-2:0))  &
-          +a(1)*(Un(:,x+1,1:ny,-2:0)-Un(:,x-1,1:ny,-2:0))
-  end do
-  !
-  do y=1,ny
-     Dy(:,1:nx,y,-2:0) = a(3)*(Un(:,1:nx,y+3,-2:0)-Un(:,1:nx,y-3,-2:0))  &
-          +a(2)*(Un(:,1:nx,y+2,-2:0)-Un(:,1:nx,y-2,-2:0))  &
-          +a(1)*(Un(:,1:nx,y+1,-2:0)-Un(:,1:nx,y-1,-2:0))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do x=1,nx
-        do y=1,ny
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de la face arriere
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
-  !
+dirz=-1
+diry=0
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=1
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine ptsback
 !******************************************************************
 !
@@ -1548,96 +1596,94 @@ end subroutine ptsback
 !******************************************************************
 !******************************************************************
 subroutine ptsfront(irk)
-  !
-  !***** Points de la face avant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,1:ny,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dz(:,1:nx,1:ny,nz+1) = Dz(:,1:nx,1:ny,nz+1) - a24(3-j)*Un(:,1:nx,1:ny,nz+1+j)
-  end do
-  do j=-5,1
-     Dz(:,1:nx,1:ny,nz+2) = Dz(:,1:nx,1:ny,nz+2) - a15(2-j)*Un(:,1:nx,1:ny,nz+2+j)
-  end do
-  do j=-6,0
-     Dz(:,1:nx,1:ny,nz+3) = Dz(:,1:nx,1:ny,nz+3) - a06(1-j)*Un(:,1:nx,1:ny,nz+3+j)
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,1:ny,nz+1:nz+3) = a(3)*(Un(:,x+3,1:ny,nz+1:nz+3)-Un(:,x-3,1:ny,nz+1:nz+3))  &
-          +a(2)*(Un(:,x+2,1:ny,nz+1:nz+3)-Un(:,x-2,1:ny,nz+1:nz+3))  &
-          +a(1)*(Un(:,x+1,1:ny,nz+1:nz+3)-Un(:,x-1,1:ny,nz+1:nz+3))
-  end do
-  !   
-  do y=1,ny
-     Dy(:,1:nx,y,nz+1:nz+3) = a(3)*(Un(:,1:nx,y+3,nz+1:nz+3)-Un(:,1:nx,y-3,nz+1:nz+3))  &
-          +a(2)*(Un(:,1:nx,y+2,nz+1:nz+3)-Un(:,1:nx,y-2,nz+1:nz+3))  &
-          +a(1)*(Un(:,1:nx,y+1,nz+1:nz+3)-Un(:,1:nx,y-1,nz+1:nz+3))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=1,ny
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !    
-           r  = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi   = xc/r2d
-              sinphi   = yc/r2d
-           else                       !Dans ce cas d/dr=d/dz
-              cosphi=1                !car alors r2d=0 et sintheta=0.
-              sinphi=1                !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           ! 
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de la face avant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=0
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=nz
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsfront
 !******************************************************************
 !
@@ -1647,99 +1693,95 @@ end subroutine ptsfront
 !******************************************************************
 !******************************************************************
 subroutine ptsbottomleft(irk)
-  !
-  !***** Points de l'arrete en bas a gauche
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,-2:0,1:nz,5) :: Dz,Dx,Dy
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,-2:0,1:nz) = Dx(:,0,-2:0,1:nz) +  a24(3+j)*Un(:,0+j,-2:0,1:nz)
-  end do
-  do j=-1,5
-     Dx(:,-1,-2:0,1:nz) = Dx(:,-1,-2:0,1:nz) + a15(2+j)*Un(:,-1+j,-2:0,1:nz)
-  end do
-  do j=0,6
-     Dx(:,-2,-2:0,1:nz) = Dx(:,-2,-2:0,1:nz) + a06(1+j)*Un(:,-2+j,-2:0,1:nz)
-  end do
-  !
-  do j=-2,4
-     Dy(:,-2:0,0,1:nz) = Dy(:,-2:0,0,1:nz) +  a24(3+j)*Un(:,-2:0,0+j,1:nz) 
-  end do
-  do j=-1,5
-     Dy(:,-2:0,-1,1:nz) = Dy(:,-2:0,-1,1:nz) + a15(2+j)*Un(:,-2:0,-1+j,1:nz) 
-  end do
-  do j=0,6
-     Dy(:,-2:0,-2,1:nz) = Dy(:,-2:0,-2,1:nz) + a06(1+j)*Un(:,-2:0,-2+j,1:nz) 
-  end do
-  !
-  do z=1,nz
-     Dz(:,-2:0,-2:0,z) = a(3)*(Un(:,-2:0,-2:0,z+3) - Un(:,-2:0,-2:0,z-3)) &
-          +a(2)*(Un(:,-2:0,-2:0,z+2) - Un(:,-2:0,-2:0,z-2)) &
-          +a(1)*(Un(:,-2:0,-2:0,z+1) - Un(:,-2:0,-2:0,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=-2,0
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete en bas a gauche
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=0
+diry=-1
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=z
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsbottomleft
 !******************************************************************
 !
@@ -1749,99 +1791,95 @@ end subroutine ptsbottomleft
 !******************************************************************
 !******************************************************************
 subroutine ptsbottomback(irk)
-  !
-  !***** Points de l'arrete bas derriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,-2:0,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dy(:,1:nx,0,-2:0)  = Dy(:,1:nx,0,-2:0)  + a24(3+j)*Un(:,1:nx,0+j,-2:0) 
-  end do
-  do j=-1,5
-     Dy(:,1:nx,-1,-2:0) = Dy(:,1:nx,-1,-2:0) + a15(2+j)*Un(:,1:nx,-1+j,-2:0) 
-  end do
-  do j=0,6
-     Dy(:,1:nx,-2,-2:0) = Dy(:,1:nx,-2,-2:0) + a06(1+j)*Un(:,1:nx,-2+j,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dz(:,1:nx,-2:0,0) =  Dz(:,1:nx,-2:0,0)   + a24(3+j)*Un(:,1:nx,-2:0,0+j)
-  end do
-  do j=-1,5
-     Dz(:,1:nx,-2:0,-1) = Dz(:,1:nx,-2:0,-1) + a15(2+j)*Un(:,1:nx,-2:0,-1+j)
-  end do
-  do j=0,6
-     Dz(:,1:nx,-2:0,-2)  = Dz(:,1:nx,-2:0,-2) + a06(1+j)*Un(:,1:nx,-2:0,-2+j)
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,-2:0,-2:0) = a(3)*(Un(:,x+3,-2:0,-2:0) - Un(:,x-3,-2:0,-2:0)) &
-          +a(2)*(Un(:,x+2,-2:0,-2:0) - Un(:,x-2,-2:0,-2:0)) &
-          +a(1)*(Un(:,x+1,-2:0,-2:0) - Un(:,x-1,-2:0,-2:0))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=-2,0
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete bas derriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=-1
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=1
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsbottomback
 !******************************************************************
 !
@@ -1851,99 +1889,95 @@ end subroutine ptsbottomback
 !******************************************************************
 !******************************************************************
 subroutine ptsleftback(irk)
-  !
-  !***** Points de l'arrete gauche arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real ::DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,1:ny,-2:0,5) :: Dy, Dx,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,1:ny,-2:0) = Dx(:,0,1:ny,-2:0) +  a24(3+j)*Un(:,0+j,1:ny,-2:0)
-  end do
-  do j=-1,5
-     Dx(:,-1,1:ny,-2:0) = Dx(:,-1,1:ny,-2:0) + a15(2+j)*Un(:,-1+j,1:ny,-2:0)
-  end do
-  do j=0,6
-     Dx(:,-2,1:ny,-2:0) = Dx(:,-2,1:ny,-2:0) + a06(1+j)*Un(:,-2+j,1:ny,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dz(:,-2:0,1:ny,0) =  Dz(:,-2:0,1:ny,0)   + a24(3+j)*Un(:,-2:0,1:ny,0+j)
-  end do
-  do j=-1,5
-     Dz(:,-2:0,1:ny,-1) = Dz(:,-2:0,1:ny,-1) + a15(2+j)*Un(:,-2:0,1:ny,-1+j)
-  end do
-  do j=0,6
-     Dz(:,-2:0,1:ny,-2)  = Dz(:,-2:0,1:ny,-2) + a06(1+j)*Un(:,-2:0,1:ny,-2+j)
-  end do
-  !
-  do y=1,ny
-     Dy(:,-2:0,y,-2:0) = a(3)*(Un(:,-2:0,y+3,-2:0) - Un(:,-2:0,y-3,-2:0)) &
-          +a(2)*(Un(:,-2:0,y+2,-2:0) - Un(:,-2:0,y-2,-2:0)) &
-          +a(1)*(Un(:,-2:0,y+1,-2:0) - Un(:,-2:0,y-1,-2:0))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=1,ny
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r  = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi   = xc/r2d
-              sinphi   = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete gauche arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real ::DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=0
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=1
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsleftback
 !******************************************************************
 !
@@ -1953,99 +1987,95 @@ end subroutine ptsleftback
 !******************************************************************
 !******************************************************************
 subroutine ptstopright(irk)
-  !
-  !***** Points de l'arrete haut droit
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,ny+1:ny+3,1:nz,5) :: Dz,Dx,Dy
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,ny+1:ny+3,1:nz) = Dx(:,nx+1,ny+1:ny+3,1:nz) - a24(3-j)*Un(:,nx+1+j,ny+1:ny+3,1:nz)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,ny+1:ny+3,1:nz) = Dx(:,nx+2,ny+1:ny+3,1:nz) - a15(2-j)*Un(:,nx+2+j,ny+1:ny+3,1:nz)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,ny+1:ny+3,1:nz) = Dx(:,nx+3,ny+1:ny+3,1:nz) - a06(1-j)*Un(:,nx+3+j,ny+1:ny+3,1:nz)
-  end do
-  !
-  do j=-4,2
-     Dy(:,nx+1:nx+3,ny+1,1:nz) = Dy(:,nx+1:nx+3,ny+1,1:nz) - a24(3-j)*Un(:,nx+1:nx+3,ny+1+j,1:nz) 
-  end do
-  do j=-5,1
-     Dy(:,nx+1:nx+3,ny+2,1:nz) = Dy(:,nx+1:nx+3,ny+2,1:nz) - a15(2-j)*Un(:,nx+1:nx+3,ny+2+j,1:nz) 
-  end do
-  do j=-6,0
-     Dy(:,nx+1:nx+3,ny+3,1:nz) = Dy(:,nx+1:nx+3,ny+3,1:nz) - a06(1-j)*Un(:,nx+1:nx+3,ny+3+j,1:nz) 
-  end do
-  !
-  do z=1,nz
-     Dz(:,nx+1:nx+3,ny+1:ny+3,z) = a(3)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+3) - Un(:,nx+1:nx+3,ny+1:ny+3,z-3)) &
-          +a(2)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+2) - Un(:,nx+1:nx+3,ny+1:ny+3,z-2)) &
-          +a(1)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+1) - Un(:,nx+1:nx+3,ny+1:ny+3,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=ny+1,ny+3
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete haut droit
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=0
+diry=1
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=z
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptstopright
 !******************************************************************
 !******************************************************************
@@ -2056,99 +2086,95 @@ end subroutine ptstopright
 !******************************************************************
 !******************************************************************
 subroutine ptsbottomright(irk)
-  !
-  !***** Points de l'arrete en bas a droite
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,-2:0,1:nz,5) :: Dz,Dx,Dy
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,-2:0,1:nz) = Dx(:,nx+1,-2:0,1:nz) - a24(3-j)*Un(:,nx+1+j,-2:0,1:nz)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,-2:0,1:nz) = Dx(:,nx+2,-2:0,1:nz) - a15(2-j)*Un(:,nx+2+j,-2:0,1:nz)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,-2:0,1:nz) = Dx(:,nx+3,-2:0,1:nz) - a06(1-j)*Un(:,nx+3+j,-2:0,1:nz)
-  end do
-  !
-  do j=-2,4
-     Dy(:,nx+1:nx+3,0,1:nz)  = Dy(:,nx+1:nx+3,0,1:nz)  + a24(3+j)*Un(:,nx+1:nx+3,0+j,1:nz) 
-  end do
-  do j=-1,5
-     Dy(:,nx+1:nx+3,-1,1:nz) = Dy(:,nx+1:nx+3,-1,1:nz) + a15(2+j)*Un(:,nx+1:nx+3,-1+j,1:nz) 
-  end do
-  do j=0,6
-     Dy(:,nx+1:nx+3,-2,1:nz) = Dy(:,nx+1:nx+3,-2,1:nz) + a06(1+j)*Un(:,nx+1:nx+3,-2+j,1:nz)
-  end do
-  !
-  do z=1,nz
-     Dz(:,nx+1:nx+3,-2:0,z) = a(3)*(Un(:,nx+1:nx+3,-2:0,z+3) - Un(:,nx+1:nx+3,-2:0,z-3)) &
-          +a(2)*(Un(:,nx+1:nx+3,-2:0,z+2) - Un(:,nx+1:nx+3,-2:0,z-2)) &
-          +a(1)*(Un(:,nx+1:nx+3,-2:0,z+1) - Un(:,nx+1:nx+3,-2:0,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=-2,0
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete en bas a droite
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=0
+diry=-1
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=z
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsbottomright
 !******************************************************************
 !
@@ -2158,100 +2184,96 @@ end subroutine ptsbottomright
 !******************************************************************
 !******************************************************************
 subroutine ptstopleft(irk)
-  !
-  !***** Points de l'arrete haut gauche
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,ny+1:ny+3,1:nz,5) :: Dz,Dx,Dy
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,ny+1:ny+3,1:nz) = Dx(:,0,ny+1:ny+3,1:nz) +  a24(3+j)*Un(:,0+j,ny+1:ny+3,1:nz)
-  end do
-  do j=-1,5
-     Dx(:,-1,ny+1:ny+3,1:nz) = Dx(:,-1,ny+1:ny+3,1:nz) + a15(2+j)*Un(:,-1+j,ny+1:ny+3,1:nz)
-  end do
-  do j=0,6
-     Dx(:,-2,ny+1:ny+3,1:nz) = Dx(:,-2,ny+1:ny+3,1:nz) + a06(1+j)*Un(:,-2+j,ny+1:ny+3,1:nz)
-  end do
-  !
-  do j=-4,2
-     Dy(:,-2:0,ny+1,1:nz) = Dy(:,-2:0,ny+1,1:nz) - a24(3-j)*Un(:,-2:0,ny+1+j,1:nz) 
-  end do
-  do j=-5,1
-     Dy(:,-2:0,ny+2,1:nz) = Dy(:,-2:0,ny+2,1:nz) - a15(2-j)*Un(:,-2:0,ny+2+j,1:nz) 
-  end do
-  do j=-6,0
-     Dy(:,-2:0,ny+3,1:nz) = Dy(:,-2:0,ny+3,1:nz) - a06(1-j)*Un(:,-2:0,ny+3+j,1:nz) 
-  end do
-  !
-  do z=1,nz
-     Dz(:,-2:0,ny+1:ny+3,z) = a(3)*(Un(:,-2:0,ny+1:ny+3,z+3) - Un(:,-2:0,ny+1:ny+3,z-3)) &
-          +a(2)*(Un(:,-2:0,ny+1:ny+3,z+2) - Un(:,-2:0,ny+1:ny+3,z-2)) &
-          +a(1)*(Un(:,-2:0,ny+1:ny+3,z+1) - Un(:,-2:0,ny+1:ny+3,z-1))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=1,nz
-     do y=ny+1,ny+3
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete haut gauche
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
-  !
+dirz=0
+diry=1
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=1,nz
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=z
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine ptstopleft
 !******************************************************************
 !
@@ -2261,100 +2283,96 @@ end subroutine ptstopleft
 !******************************************************************
 !******************************************************************
 subroutine ptstopback(irk)
-  !
-  !***** Points de l'arrete haut arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,ny+1:ny+3,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dy(:,1:nx,ny+1,-2:0) = Dy(:,1:nx,ny+1,-2:0) - a24(3-j)*Un(:,1:nx,ny+1+j,-2:0) 
-  end do
-  do j=-5,1
-     Dy(:,1:nx,ny+2,-2:0) = Dy(:,1:nx,ny+2,-2:0) - a15(2-j)*Un(:,1:nx,ny+2+j,-2:0) 
-  end do
-  do j=-6,0
-     Dy(:,1:nx,ny+3,-2:0) = Dy(:,1:nx,ny+3,-2:0) - a06(1-j)*Un(:,1:nx,ny+3+j,-2:0) 
-  end do
-  !
-  do j=-2,4
-     Dz(:,1:nx,ny+1:ny+3,0) =  Dz(:,1:nx,ny+1:ny+3,0)   + a24(3+j)*Un(:,1:nx,ny+1:ny+3,0+j)
-  end do
-  do j=-1,5
-     Dz(:,1:nx,ny+1:ny+3,-1) = Dz(:,1:nx,ny+1:ny+3,-1) + a15(2+j)*Un(:,1:nx,ny+1:ny+3,-1+j)
-  end do
-  do j=0,6
-     Dz(:,1:nx,ny+1:ny+3,-2)  = Dz(:,1:nx,ny+1:ny+3,-2) + a06(1+j)*Un(:,1:nx,ny+1:ny+3,-2+j)
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,ny+1:ny+3,-2:0) = a(3)*(Un(:,x+3,ny+1:ny+3,-2:0) - Un(:,x-3,ny+1:ny+3,-2:0)) &
-          +a(2)*(Un(:,x+2,ny+1:ny+3,-2:0) - Un(:,x-2,ny+1:ny+3,-2:0)) &
-          +a(1)*(Un(:,x+1,ny+1:ny+3,-2:0) - Un(:,x-1,ny+1:ny+3,-2:0))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=ny+1,ny+3
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete haut arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
-  !
+dirz=-1
+diry=1
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=1
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine ptstopback
 !******************************************************************
 !
@@ -2364,99 +2382,95 @@ end subroutine ptstopback
 !******************************************************************
 !******************************************************************
 subroutine ptsrightback(irk)
-  !
-  !***** Points de l'arrete droite arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,1:ny,-2:0,5) :: Dy,Dx,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx = 0.
-  Dz = 0.
-  Dy = 0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,1:ny,-2:0) = Dx(:,nx+1,1:ny,-2:0) - a24(3-j)*Un(:,nx+1+j,1:ny,-2:0)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,1:ny,-2:0) = Dx(:,nx+2,1:ny,-2:0) - a15(2-j)*Un(:,nx+2+j,1:ny,-2:0)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,1:ny,-2:0) = Dx(:,nx+3,1:ny,-2:0) - a06(1-j)*Un(:,nx+3+j,1:ny,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dz(:,nx+1:nx+3,1:ny,0) =  Dz(:,nx+1:nx+3,1:ny,0)   + a24(3+j)*Un(:,nx+1:nx+3,1:ny,0+j)
-  end do
-  do j=-1,5
-     Dz(:,nx+1:nx+3,1:ny,-1) = Dz(:,nx+1:nx+3,1:ny,-1) + a15(2+j)*Un(:,nx+1:nx+3,1:ny,-1+j)
-  end do
-  do j=0,6
-     Dz(:,nx+1:nx+3,1:ny,-2)  = Dz(:,nx+1:nx+3,1:ny,-2) + a06(1+j)*Un(:,nx+1:nx+3,1:ny,-2+j)
-  end do
-  !
-  do y=1,ny
-     Dy(:,nx+1:nx+3,y,-2:0) = a(3)*(Un(:,nx+1:nx+3,y+3,-2:0) - Un(:,nx+1:nx+3,y-3,-2:0)) &
-          +a(2)*(Un(:,nx+1:nx+3,y+2,-2:0) - Un(:,nx+1:nx+3,y-2,-2:0)) &
-          +a(1)*(Un(:,nx+1:nx+3,y+1,-2:0) - Un(:,nx+1:nx+3,y-1,-2:0))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=1,ny
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r  = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi   = xc/r2d
-              sinphi   = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete droite arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=0
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=1
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsrightback
 !******************************************************************
 !
@@ -2466,99 +2480,95 @@ end subroutine ptsrightback
 !******************************************************************
 !******************************************************************
 subroutine ptsrightfront(irk)
-  !
-  !***** Points de l'arrete droite devant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,1:ny,nz+1:nz+3,5) :: Dy,Dx,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,1:ny,nz+1:nz+3) = Dx(:,nx+1,1:ny,nz+1:nz+3) - a24(3-j)*Un(:,nx+1+j,1:ny,nz+1:nz+3)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,1:ny,nz+1:nz+3) = Dx(:,nx+2,1:ny,nz+1:nz+3) - a15(2-j)*Un(:,nx+2+j,1:ny,nz+1:nz+3)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,1:ny,nz+1:nz+3) = Dx(:,nx+3,1:ny,nz+1:nz+3) - a06(1-j)*Un(:,nx+3+j,1:ny,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dz(:,nx+1:nx+3,1:ny,nz+1) = Dz(:,nx+1:nx+3,1:ny,nz+1) - a24(3-j)*Un(:,nx+1:nx+3,1:ny,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,nx+1:nx+3,1:ny,nz+2) = Dz(:,nx+1:nx+3,1:ny,nz+2) - a15(2-j)*Un(:,nx+1:nx+3,1:ny,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,nx+1:nx+3,1:ny,nz+3) = Dz(:,nx+1:nx+3,1:ny,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,1:ny,nz+3+j) 
-  end do
-  !
-  do y=1,ny
-     Dy(:,nx+1:nx+3,y,nz+1:nz+3) = a(3)*(Un(:,nx+1:nx+3,y+3,nz+1:nz+3) - Un(:,nx+1:nx+3,y-3,nz+1:nz+3)) &
-          +a(2)*(Un(:,nx+1:nx+3,y+2,nz+1:nz+3) - Un(:,nx+1:nx+3,y-2,nz+1:nz+3)) &
-          +a(1)*(Un(:,nx+1:nx+3,y+1,nz+1:nz+3) - Un(:,nx+1:nx+3,y-1,nz+1:nz+3))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=1,ny
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r  = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi   = xc/r2d
-              sinphi   = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete droite devant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=0
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=nz
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsrightfront
 !******************************************************************
 !
@@ -2568,99 +2578,95 @@ end subroutine ptsrightfront
 !******************************************************************
 !******************************************************************
 subroutine ptsleftfront(irk)
-  !
-  !***** Points de l'arrete droite devant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,1:ny,nz+1:nz+3,5) :: Dy,Dx,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,1:ny,nz+1:nz+3) = Dx(:,0,1:ny,nz+1:nz+3) +  a24(3+j)*Un(:,0+j,1:ny,nz+1:nz+3)
-  end do
-  do j=-1,5
-     Dx(:,-1,1:ny,nz+1:nz+3) = Dx(:,-1,1:ny,nz+1:nz+3) + a15(2+j)*Un(:,-1+j,1:ny,nz+1:nz+3)
-  end do
-  do j=0,6
-     Dx(:,-2,1:ny,nz+1:nz+3) = Dx(:,-2,1:ny,nz+1:nz+3) + a06(1+j)*Un(:,-2+j,1:ny,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dz(:,-2:0,1:ny,nz+1) = Dz(:,-2:0,1:ny,nz+1) - a24(3-j)*Un(:,-2:0,1:ny,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,-2:0,1:ny,nz+2) = Dz(:,-2:0,1:ny,nz+2) - a15(2-j)*Un(:,-2:0,1:ny,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,-2:0,1:ny,nz+3) = Dz(:,-2:0,1:ny,nz+3) - a06(1-j)*Un(:,-2:0,1:ny,nz+3+j) 
-  end do
-  !
-  do y=1,ny
-     Dy(:,-2:0,y,nz+1:nz+3) = a(3)*(Un(:,-2:0,y+3,nz+1:nz+3) - Un(:,-2:0,y-3,nz+1:nz+3)) &
-          +a(2)*(Un(:,-2:0,y+2,nz+1:nz+3) - Un(:,-2:0,y-2,nz+1:nz+3)) &
-          +a(1)*(Un(:,-2:0,y+1,nz+1:nz+3) - Un(:,-2:0,y-1,nz+1:nz+3))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=1,ny
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete droite devant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=0
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=1,ny
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=nz
+         y3=y ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsleftfront
 !******************************************************************
 !
@@ -2670,99 +2676,95 @@ end subroutine ptsleftfront
 !******************************************************************
 !******************************************************************
 subroutine ptsbottomfront(irk)
-  !
-  !***** Points de l'arrete bas devant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,-2:0,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dz=0.
-  Dy=0.
-  !
-  do j=-2,4
-     Dy(:,1:nx,0,nz+1:nz+3)  = Dy(:,1:nx,0,nz+1:nz+3)  + a24(3+j)*Un(:,1:nx,0+j,nz+1:nz+3) 
-  end do
-  do j=-1,5
-     Dy(:,1:nx,-1,nz+1:nz+3) = Dy(:,1:nx,-1,nz+1:nz+3) + a15(2+j)*Un(:,1:nx,-1+j,nz+1:nz+3) 
-  end do
-  do j=0,6
-     Dy(:,1:nx,-2,nz+1:nz+3) = Dy(:,1:nx,-2,nz+1:nz+3) + a06(1+j)*Un(:,1:nx,-2+j,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dz(:,1:nx,-2:0,nz+1) = Dz(:,1:nx,-2:0,nz+1) - a24(3-j)*Un(:,1:nx,-2:0,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,1:nx,-2:0,nz+2) = Dz(:,1:nx,-2:0,nz+2) - a15(2-j)*Un(:,1:nx,-2:0,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,1:nx,-2:0,nz+3) = Dz(:,1:nx,-2:0,nz+3) - a06(1-j)*Un(:,1:nx,-2:0,nz+3+j) 
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,-2:0,nz+1:nz+3) = a(3)*(Un(:,x+3,-2:0,nz+1:nz+3) - Un(:,x-3,-2:0,nz+1:nz+3)) &
-          +a(2)*(Un(:,x+2,-2:0,nz+1:nz+3) - Un(:,x-2,-2:0,nz+1:nz+3)) &
-          +a(1)*(Un(:,x+1,-2:0,nz+1:nz+3) - Un(:,x-1,-2:0,nz+1:nz+3))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=-2,0
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2)
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !      
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete bas devant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=-1
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=nz
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!      
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptsbottomfront
 !******************************************************************
 !
@@ -2772,99 +2774,95 @@ end subroutine ptsbottomfront
 !******************************************************************
 !******************************************************************
 subroutine ptstopfront(irk)
-  !
-  !***** Points de l'arrete haut devant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(1:nx,ny+1:ny+3,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dz = 0.
-  Dy = 0.
-  Dx = 0.
-  !
-  do j=-4,2
-     Dy(:,1:nx,ny+1,nz+1:nz+3) = Dy(:,1:nx,ny+1,nz+1:nz+3) - a24(3-j)*Un(:,1:nx,ny+1+j,nz+1:nz+3) 
-  end do
-  do j=-5,1
-     Dy(:,1:nx,ny+2,nz+1:nz+3) = Dy(:,1:nx,ny+2,nz+1:nz+3) - a15(2-j)*Un(:,1:nx,ny+2+j,nz+1:nz+3) 
-  end do
-  do j=-6,0
-     Dy(:,1:nx,ny+3,nz+1:nz+3) = Dy(:,1:nx,ny+3,nz+1:nz+3) - a06(1-j)*Un(:,1:nx,ny+3+j,nz+1:nz+3) 
-  end do
-  !
-  do j=-4,2
-     Dz(:,1:nx,ny+1:ny+3,nz+1) = Dz(:,1:nx,ny+1:ny+3,nz+1) - a24(3-j)*Un(:,1:nx,ny+1:ny+3,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,1:nx,ny+1:ny+3,nz+2) = Dz(:,1:nx,ny+1:ny+3,nz+2) - a15(2-j)*Un(:,1:nx,ny+1:ny+3,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,1:nx,ny+1:ny+3,nz+3) = Dz(:,1:nx,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,1:nx,ny+1:ny+3,nz+3+j) 
-  end do
-  !
-  do x=1,nx
-     Dx(:,x,ny+1:ny+3,nz+1:nz+3) = a(3)*(Un(:,x+3,ny+1:ny+3,nz+1:nz+3) - Un(:,x-3,ny+1:ny+3,nz+1:nz+3)) &
-          +a(2)*(Un(:,x+2,ny+1:ny+3,nz+1:nz+3) - Un(:,x-2,ny+1:ny+3,nz+1:nz+3)) &
-          +a(1)*(Un(:,x+1,ny+1:ny+3,nz+1:nz+3) - Un(:,x-1,ny+1:ny+3,nz+1:nz+3))
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=ny+1,ny+3
-        do x=1,nx
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r  = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi   = xc/r2d
-              sinphi   = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points de l'arrete haut devant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=1
+dirx=0
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=1,nx
+
+         z3=nz
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=x
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine ptstopfront
 !******************************************************************
 !
@@ -2874,103 +2872,95 @@ end subroutine ptstopfront
 !******************************************************************
 !******************************************************************
 subroutine pts_c_bottomleftback(irk)
-  !
-  !***** Points du coin bas gauche arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,-2:0,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,-2:0,-2:0) = Dx(:,0,-2:0,-2:0) +  a24(3+j)*Un(:,0+j,-2:0,-2:0)
-  end do
-  do j=-1,5
-     Dx(:,-1,-2:0,-2:0) = Dx(:,-1,-2:0,-2:0) + a15(2+j)*Un(:,-1+j,-2:0,-2:0)
-  end do
-  do j=0,6
-     Dx(:,-2,-2:0,-2:0) = Dx(:,-2,-2:0,-2:0) + a06(1+j)*Un(:,-2+j,-2:0,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dy(:,-2:0,0,:)  = Dy(:,-2:0,0,-2:0)  + a24(3+j)*Un(:,-2:0,0+j,-2:0) 
-  end do
-  do j=-1,5
-     Dy(:,-2:0,-1,:) = Dy(:,-2:0,-1,-2:0) + a15(2+j)*Un(:,-2:0,-1+j,-2:0) 
-  end do
-  do j=0,6
-     Dy(:,-2:0,-2,:) = Dy(:,-2:0,-2,-2:0) + a06(1+j)*Un(:,-2:0,-2+j,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dz(:,-2:0,-2:0,0) =  Dz(:,-2:0,-2:0,0)   + a24(3+j)*Un(:,-2:0,-2:0,0+j)
-  end do
-  do j=-1,5
-     Dz(:,-2:0,-2:0,-1) = Dz(:,-2:0,-2:0,-1) + a15(2+j)*Un(:,-2:0,-2:0,-1+j)
-  end do
-  do j=0,6
-     Dz(:,-2:0,-2:0,-2)  = Dz(:,-2:0,-2:0,-2) + a06(1+j)*Un(:,-2:0,-2:0,-2+j)
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=-2,0
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin bas gauche arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=-1
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=1
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+	 end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_bottomleftback
 !******************************************************************
 !
@@ -2980,103 +2970,95 @@ end subroutine pts_c_bottomleftback
 !******************************************************************
 !******************************************************************
 subroutine pts_c_bottomrightback(irk)
-  !
-  !***** Points du coin bas droit arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,-2:0,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,-2:0,-2:0) = Dx(:,nx+1,-2:0,-2:0) - a24(3-j)*Un(:,nx+1+j,-2:0,-2:0)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,-2:0,-2:0) = Dx(:,nx+2,-2:0,-2:0) - a15(2-j)*Un(:,nx+2+j,-2:0,-2:0)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,-2:0,-2:0) = Dx(:,nx+3,-2:0,-2:0) - a06(1-j)*Un(:,nx+3+j,-2:0,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dy(:,nx+1:nx+3,0,-2:0)  = Dy(:,nx+1:nx+3,0,-2:0)  + a24(3+j)*Un(:,nx+1:nx+3,0+j,-2:0) 
-  end do
-  do j=-1,5
-     Dy(:,nx+1:nx+3,-1,-2:0) = Dy(:,nx+1:nx+3,-1,-2:0) + a15(2+j)*Un(:,nx+1:nx+3,-1+j,-2:0) 
-  end do
-  do j=0,6
-     Dy(:,nx+1:nx+3,-2,-2:0) = Dy(:,nx+1:nx+3,-2,-2:0) + a06(1+j)*Un(:,nx+1:nx+3,-2+j,-2:0)
-  end do
-  !
-  do j=-2,4
-     Dz(:,nx+1:nx+3,-2:0,0) =  Dz(:,nx+1:nx+3,-2:0,0)   + a24(3+j)*Un(:,nx+1:nx+3,-2:0,0+j)
-  end do
-  do j=-1,5
-     Dz(:,nx+1:nx+3,-2:0,-1) = Dz(:,nx+1:nx+3,-2:0,-1) + a15(2+j)*Un(:,nx+1:nx+3,-2:0,-1+j)
-  end do
-  do j=0,6
-     Dz(:,nx+1:nx+3,-2:0,-2)  = Dz(:,nx+1:nx+3,-2:0,-2) + a06(1+j)*Un(:,nx+1:nx+3,-2:0,-2+j)
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=-2,0
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin bas droit arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=-1
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=1
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_bottomrightback
 !******************************************************************
 !
@@ -3086,103 +3068,95 @@ end subroutine pts_c_bottomrightback
 !******************************************************************
 !******************************************************************
 subroutine pts_c_toprightback(irk)
-  !
-  !***** Points du coin haut droits arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,ny+1:ny+3,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,ny+1:ny+3,-2:0) = Dx(:,nx+1,ny+1:ny+3,-2:0) - a24(3-j)*Un(:,nx+1+j,ny+1:ny+3,-2:0)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,ny+1:ny+3,-2:0) = Dx(:,nx+2,ny+1:ny+3,-2:0) - a15(2-j)*Un(:,nx+2+j,ny+1:ny+3,-2:0)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,ny+1:ny+3,-2:0) = Dx(:,nx+3,ny+1:ny+3,-2:0) - a06(1-j)*Un(:,nx+3+j,ny+1:ny+3,-2:0)
-  end do
-  !
-  do j=-4,2
-     Dy(:,nx+1:nx+3,ny+1,:) = Dy(:,nx+1:nx+3,ny+1,-2:0) - a24(3-j)*Un(:,nx+1:nx+3,ny+1+j,-2:0) 
-  end do
-  do j=-5,1
-     Dy(:,nx+1:nx+3,ny+2,:) = Dy(:,nx+1:nx+3,ny+2,-2:0) - a15(2-j)*Un(:,nx+1:nx+3,ny+2+j,-2:0) 
-  end do
-  do j=-6,0
-     Dy(:,nx+1:nx+3,ny+3,:) = Dy(:,nx+1:nx+3,ny+3,-2:0) - a06(1-j)*Un(:,nx+1:nx+3,ny+3+j,-2:0) 
-  end do
-  !
-  do j=-2,4
-     Dz(:,nx+1:nx+3,ny+1:ny+3,0) =  Dz(:,nx+1:nx+3,ny+1:ny+3,0)   + a24(3+j)*Un(:,nx+1:nx+3,ny+1:ny+3,0+j)
-  end do
-  do j=-1,5
-     Dz(:,nx+1:nx+3,ny+1:ny+3,-1) = Dz(:,nx+1:nx+3,ny+1:ny+3,-1) + a15(2+j)*Un(:,nx+1:nx+3,ny+1:ny+3,-1+j)
-  end do
-  do j=0,6
-     Dz(:,nx+1:nx+3,ny+1:ny+3,-2)  = Dz(:,nx+1:nx+3,ny+1:ny+3,-2) + a06(1+j)*Un(:,nx+1:nx+3,ny+1:ny+3,-2+j)
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=ny+1,ny+3
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin haut droits arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=1
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=1
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_toprightback
 !******************************************************************
 !
@@ -3192,103 +3166,95 @@ end subroutine pts_c_toprightback
 !******************************************************************
 !******************************************************************
 subroutine pts_c_topleftback(irk)
-  !
-  !***** Points du coin haut gauche arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,ny+1:ny+3,-2:0,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,ny+1:ny+3,-2:0) = Dx(:,0,ny+1:ny+3,-2:0) +  a24(3+j)*Un(:,0+j,ny+1:ny+3,-2:0)
-  end do
-  do j=-1,5
-     Dx(:,-1,ny+1:ny+3,-2:0) = Dx(:,-1,ny+1:ny+3,-2:0) + a15(2+j)*Un(:,-1+j,ny+1:ny+3,-2:0)
-  end do
-  do j=0,6
-     Dx(:,-2,ny+1:ny+3,-2:0) = Dx(:,-2,ny+1:ny+3,-2:0) + a06(1+j)*Un(:,-2+j,ny+1:ny+3,-2:0)
-  end do
-  !
-  do j=-4,2
-     Dy(:,-2:0,ny+1,:) = Dy(:,-2:0,ny+1,-2:0) - a24(3-j)*Un(:,-2:0,ny+1+j,-2:0) 
-  end do
-  do j=-5,1
-     Dy(:,-2:0,ny+2,:) = Dy(:,-2:0,ny+2,-2:0) - a15(2-j)*Un(:,-2:0,ny+2+j,-2:0) 
-  end do
-  do j=-6,0
-     Dy(:,-2:0,ny+3,:) = Dy(:,-2:0,ny+3,-2:0) - a06(1-j)*Un(:,-2:0,ny+3+j,-2:0) 
-  end do
-  !
-  do j=-2,4
-     Dz(:,-2:0,ny+1:ny+3,0) =  Dz(:,-2:0,ny+1:ny+3,0)   + a24(3+j)*Un(:,-2:0,ny+1:ny+3,0+j)
-  end do
-  do j=-1,5
-     Dz(:,-2:0,ny+1:ny+3,-1) = Dz(:,-2:0,ny+1:ny+3,-1) + a15(2+j)*Un(:,-2:0,ny+1:ny+3,-1+j)
-  end do
-  do j=0,6
-     Dz(:,-2:0,ny+1:ny+3,-2)  = Dz(:,-2:0,ny+1:ny+3,-2) + a06(1+j)*Un(:,-2:0,ny+1:ny+3,-2+j)
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=-2,0
-     do y=ny+1,ny+3
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin haut gauche arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=-1
+diry=1
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=-2,0
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=1
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+	    end do
+          end do
+        end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_topleftback
 !******************************************************************
 !
@@ -3298,103 +3264,95 @@ end subroutine pts_c_topleftback
 !******************************************************************
 !******************************************************************
 subroutine pts_c_bottomleftfront(irk)
-  !
-  !***** Points du coin gauche bas devant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,-2:0,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,-2:0,nz+1:nz+3) = Dx(:,0,-2:0,nz+1:nz+3) +  a24(3+j)*Un(:,0+j,-2:0,nz+1:nz+3)
-  end do
-  do j=-1,5
-     Dx(:,-1,-2:0,nz+1:nz+3) = Dx(:,-1,-2:0,nz+1:nz+3) + a15(2+j)*Un(:,-1+j,-2:0,nz+1:nz+3)
-  end do
-  do j=0,6
-     Dx(:,-2,-2:0,nz+1:nz+3) = Dx(:,-2,-2:0,nz+1:nz+3) + a06(1+j)*Un(:,-2+j,-2:0,nz+1:nz+3)
-  end do
-  !
-  do j=-2,4
-     Dy(:,-2:0,0,nz+1:nz+3)  = Dy(:,-2:0,0,nz+1:nz+3)  + a24(3+j)*Un(:,-2:0,0+j,nz+1:nz+3) 
-  end do
-  do j=-1,5
-     Dy(:,-2:0,-1,nz+1:nz+3) = Dy(:,-2:0,-1,nz+1:nz+3) + a15(2+j)*Un(:,-2:0,-1+j,nz+1:nz+3) 
-  end do
-  do j=0,6
-     Dy(:,-2:0,-2,nz+1:nz+3) = Dy(:,-2:0,-2,nz+1:nz+3) + a06(1+j)*Un(:,-2:0,-2+j,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dz(:,-2:0,-2:0,nz+1) = Dz(:,-2:0,-2:0,nz+1) - a24(3-j)*Un(:,-2:0,-2:0,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,-2:0,-2:0,nz+2) = Dz(:,-2:0,-2:0,nz+2) - a15(2-j)*Un(:,-2:0,-2:0,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,-2:0,-2:0,nz+3) = Dz(:,-2:0,-2:0,nz+3) - a06(1-j)*Un(:,-2:0,-2:0,nz+3+j) 
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do y=-2,0
-     do z=nz+1,nz+3
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin gauche bas devant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=-1
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=nz
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_bottomleftfront
 !******************************************************************
 !
@@ -3404,103 +3362,95 @@ end subroutine pts_c_bottomleftfront
 !******************************************************************
 !******************************************************************
 subroutine pts_c_bottomrightfront(irk)
-  !
-  !***** Points du coin bas droit avant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,-2:0,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,-2:0,nz+1:nz+3) = Dx(:,nx+1,-2:0,nz+1:nz+3) - a24(3-j)*Un(:,nx+1+j,-2:0,nz+1:nz+3)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,-2:0,nz+1:nz+3) = Dx(:,nx+2,-2:0,nz+1:nz+3) - a15(2-j)*Un(:,nx+2+j,-2:0,nz+1:nz+3)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,-2:0,nz+1:nz+3) = Dx(:,nx+3,-2:0,nz+1:nz+3) - a06(1-j)*Un(:,nx+3+j,-2:0,nz+1:nz+3)
-  end do
-  !
-  do j=-2,4
-     Dy(:,nx+1:nx+3,0,nz+1:nz+3)  = Dy(:,nx+1:nx+3,0,nz+1:nz+3)  + a24(3+j)*Un(:,nx+1:nx+3,0+j,nz+1:nz+3) 
-  end do
-  do j=-1,5
-     Dy(:,nx+1:nx+3,-1,nz+1:nz+3) = Dy(:,nx+1:nx+3,-1,nz+1:nz+3) + a15(2+j)*Un(:,nx+1:nx+3,-1+j,nz+1:nz+3) 
-  end do
-  do j=0,6
-     Dy(:,nx+1:nx+3,-2,nz+1:nz+3) = Dy(:,nx+1:nx+3,-2,nz+1:nz+3) + a06(1+j)*Un(:,nx+1:nx+3,-2+j,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dz(:,nx+1:nx+3,-2:0,nz+1) = Dz(:,nx+1:nx+3,-2:0,nz+1) - a24(3-j)*Un(:,nx+1:nx+3,-2:0,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,nx+1:nx+3,-2:0,nz+2) = Dz(:,nx+1:nx+3,-2:0,nz+2) - a15(2-j)*Un(:,nx+1:nx+3,-2:0,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,nx+1:nx+3,-2:0,nz+3) = Dz(:,nx+1:nx+3,-2:0,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,-2:0,nz+3+j) 
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=-2,0
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin bas droit avant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=-1
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=-2,0
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd)
+         do x=nx+1,nx+3
+
+         z3=nz
+         y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_bottomrightfront
 !******************************************************************
 !
@@ -3510,103 +3460,95 @@ end subroutine pts_c_bottomrightfront
 !******************************************************************
 !******************************************************************
 subroutine pts_c_toprightfront(irk)
-  !
-  !***** Points du coin haut droit devant (z>0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(nx+1:nx+3,ny+1:ny+3,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-4,2
-     Dx(:,nx+1,ny+1:ny+3,nz+1:nz+3) = Dx(:,nx+1,ny+1:ny+3,nz+1:nz+3) - a24(3-j)*Un(:,nx+1+j,ny+1:ny+3,nz+1:nz+3)
-  end do
-  do j=-5,1
-     Dx(:,nx+2,ny+1:ny+3,nz+1:nz+3) = Dx(:,nx+2,ny+1:ny+3,nz+1:nz+3) - a15(2-j)*Un(:,nx+2+j,ny+1:ny+3,nz+1:nz+3)
-  end do
-  do j=-6,0
-     Dx(:,nx+3,ny+1:ny+3,nz+1:nz+3) = Dx(:,nx+3,ny+1:ny+3,nz+1:nz+3) - a06(1-j)*Un(:,nx+3+j,ny+1:ny+3,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dy(:,nx+1:nx+3,ny+1,:) = Dy(:,nx+1:nx+3,ny+1,nz+1:nz+3) - a24(3-j)*Un(:,nx+1:nx+3,ny+1+j,nz+1:nz+3) 
-  end do
-  do j=-5,1
-     Dy(:,nx+1:nx+3,ny+2,:) = Dy(:,nx+1:nx+3,ny+2,nz+1:nz+3) - a15(2-j)*Un(:,nx+1:nx+3,ny+2+j,nz+1:nz+3) 
-  end do
-  do j=-6,0
-     Dy(:,nx+1:nx+3,ny+3,:) = Dy(:,nx+1:nx+3,ny+3,nz+1:nz+3) - a06(1-j)*Un(:,nx+1:nx+3,ny+3+j,nz+1:nz+3) 
-  end do
-  !
-  do j=-4,2
-     Dz(:,nx+1:nx+3,ny+1:ny+3,nz+1) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+1) - a24(3-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,nx+1:nx+3,ny+1:ny+3,nz+2) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+2) - a15(2-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,nx+1:nx+3,ny+1:ny+3,nz+3) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+3+j) 
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=ny+1,ny+3
-        do x=nx+1,nx+3
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin haut droit devant (z>0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=1
+dirx=1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=nx+1,nx+3
+
+         z3=nz
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=nx
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_toprightfront
 !******************************************************************
 !
@@ -3616,103 +3558,95 @@ end subroutine pts_c_toprightfront
 !******************************************************************
 !******************************************************************
 subroutine pts_c_topleftfront(irk)
-  !
-  !***** Points du coin gauche haut arriere (z<0)
-  !******************************************************************
-  !******************************************************************
-  use mod_scheme
-  use mod_vectors
-  implicit none
-  integer :: irk,i,j,x,y,z
-  real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
-  real, dimension(-2:0,ny+1:ny+3,nz+1:nz+3,5) :: Dx,Dy,Dz
-  real :: uer, uetheta, uephi
-  !
-  Dx=0.
-  Dy=0.
-  Dz=0.
-  !
-  do j=-2,4
-     Dx(:,0,ny+1:ny+3,nz+1:nz+3) = Dx(:,0,ny+1:ny+3,nz+1:nz+3) + a24(3+j)*Un(:,0+j,ny+1:ny+3,nz+1:nz+3)
-  end do
-  do j=-1,5
-     Dx(:,-1,ny+1:ny+3,nz+1:nz+3) = Dx(:,-1,ny+1:ny+3,nz+1:nz+3) + a15(2+j)*Un(:,-1+j,ny+1:ny+3,nz+1:nz+3)
-  end do
-  do j=0,6
-     Dx(:,-2,ny+1:ny+3,nz+1:nz+3) = Dx(:,-2,ny+1:ny+3,nz+1:nz+3) + a06(1+j)*Un(:,-2+j,ny+1:ny+3,nz+1:nz+3)
-  end do
-  !
-  do j=-4,2
-     Dy(:,-2:0,ny+1,:) = Dy(:,-2:0,ny+1,nz+1:nz+3) - a24(3-j)*Un(:,-2:0,ny+1+j,nz+1:nz+3) 
-  end do
-  do j=-5,1
-     Dy(:,-2:0,ny+2,:) = Dy(:,-2:0,ny+2,nz+1:nz+3) - a15(2-j)*Un(:,-2:0,ny+2+j,nz+1:nz+3) 
-  end do
-  do j=-6,0
-     Dy(:,-2:0,ny+3,:) = Dy(:,-2:0,ny+3,nz+1:nz+3) - a06(1-j)*Un(:,-2:0,ny+3+j,nz+1:nz+3) 
-  end do
-  !
-  do j=-4,2
-     Dz(:,-2:0,ny+1:ny+3,nz+1) = Dz(:,-2:0,ny+1:ny+3,nz+1) - a24(3-j)*Un(:,-2:0,ny+1:ny+3,nz+1+j) 
-  end do
-  do j=-5,1
-     Dz(:,-2:0,ny+1:ny+3,nz+2) = Dz(:,-2:0,ny+1:ny+3,nz+2) - a15(2-j)*Un(:,-2:0,ny+1:ny+3,nz+2+j) 
-  end do
-  do j=-6,0
-     Dz(:,-2:0,ny+1:ny+3,nz+3) = Dz(:,-2:0,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,-2:0,ny+1:ny+3,nz+3+j) 
-  end do
-  !
-!$OMP DO SCHEDULE(static)  collapse(3)
-  do z=nz+1,nz+3
-     do y=ny+1,ny+3
-        do x=-2,0
-           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
-           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
-           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
-           !
-           xc = xg(x) - xg(nxray)
-           yc = yg(y) - yg(nyray)
-           zc = zg(z) - zg(nzray)
-           !
-           r = sqrt(xc**2 + yc**2 + zc**2)
-           r2d= sqrt(xc**2 + yc**2) 
-           costheta = zc/r
-           sintheta = r2d/r
-           if(r2d.ne.0) then
-              cosphi = xc/r2d
-              sinphi = yc/r2d
-           else                            !Dans ce cas d/dr=d/dz
-              cosphi=1                     !car alors r2d=0 et sintheta=0.
-              sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
-           end if
-           !
-           xc = sintheta*cosphi
-           yc = sintheta*sinphi
-           zc = costheta
-           !
-           uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
-           uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
-           uephi   =  -sinphi*uo(x,y,z) + cosphi*vo(x,y,z)
-           vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
-           !
-           do i=1,5
-              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
-           end do
-           !
-           do i=1,5          
-              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
-           end do
-           !
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-!$OMP BARRIER
+!
+!***** Points du coin gauche haut arriere (z<0)
+!******************************************************************
+!******************************************************************
+   use mod_scheme
+   use mod_condlim
+   use mod_vectors
+   implicit none
+   integer :: irk,i,j,x,y,z
+   real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
+   real, dimension(5) :: Dx,Dy,Dz
+   real :: uer, uetheta, uephi
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
+!
+!
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+!
 
-!  enddo
-!  enddo
-!  enddo
-  !
+dirz=1
+diry=1
+dirx=-1
+
+!$OMP DO SCHEDULE(static) collapse(2)
+       do z=nz+1,nz+3
+       do y=ny+1,ny+3
+!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+         do x=-2,0
+
+         z3=nz
+         y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
+         x3=1
+
+       Dx=0.
+       Dy=0.
+       Dz=0.
+
+         do j=-3,3
+           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
+           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
+           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         enddo
+
+           Dx = Dx* dxg(x)
+           Dy = Dy* dyg(y)
+           Dz = Dz* dxg(z)
+!
+	    xc = xg(x) - xg(nxray)
+	    yc = yg(y) - yg(nyray)
+	    zc = zg(z) - zg(nzray)
+!
+             r  =1./sqrt(xc**2 + yc**2 + zc**2)
+	    r2d= sqrt(xc**2 + yc**2) 
+             costheta =  zc*r
+             sintheta = r2d*r
+            if(r2d.ne.0) then
+               cosphi = xc/r2d
+               sinphi = yc/r2d
+            else                            !Dans ce cas d/dr=d/dz
+               cosphi=1.                     !car alors r2d=0 et sintheta=0.
+               sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
+            end if
+!
+	    xc = sintheta*cosphi
+	    yc = sintheta*sinphi
+	    zc = costheta
+!
+            uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
+             uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
+             uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
+            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
+!
+                DD = vray * (xc*Dx + yc*Dy  + zc*Dz  + Un(:,x,y,z)*r)
+!
+	      Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
+!
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
 end subroutine pts_c_topleftfront
 !******************************************************************
 !
@@ -3722,38 +3656,37 @@ end subroutine pts_c_topleftfront
 !******************************************************************
 !******************************************************************
 subroutine filtrage8x
-  !
-  !***** Filtrage des champs dans la direction x
-  !******************************************************************
-  !******************************************************************
-  use mod_filtrage
-  use mod_vectors
-  use mod_scheme
-  implicit none
-  integer :: x,y,z,i,j
-  !
-  !
-  !///// FILTRAGE EN X DES POINTS INTERIEURS
-  !
-  !
-!$OMP DO SCHEDULE(STATIC)   collapse(3) ! IMPORTANT
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-           do x=xfmin_x,xfmax_x  
-              do i=1,5
-              Un(i,x,y,z) = Ut(i,x,y,z) - cfx*                &
-                   ( dfilt8(4)*(Ut(i,x+4,y,z)+Ut(i,x-4,y,z))  &
-                    +dfilt8(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
-                    +dfilt8(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
-                    +dfilt8(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                    +dfilt8(0)*Ut(i,x,y,z) )
-           end do
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-  !
-  !
+!
+!***** Filtrage des champs dans la direction x
+!******************************************************************
+!******************************************************************
+   use mod_filtrage
+   use mod_vectors
+   use mod_scheme
+   implicit none
+   integer :: x,y,z,i,j
+!
+!
+!///// FILTRAGE EN X DES POINTS INTERIEURS
+!
+!
+!$OMP DO SCHEDULE(static) collapse(2)
+      do z=zfmin_x,zfmax_x
+         do y=yfmin_x,yfmax_x
+!$OMP SIMD 
+            do x=xfmin_x,xfmax_x
+               Un(:,x,y,z) = Ut(:,x,y,z) - cfx*                   &
+                           ( dfilt8(4)*(Ut(:,x+4,y,z)+Ut(:,x-4,y,z))  &
+                            +dfilt8(3)*(Ut(:,x+3,y,z)+Ut(:,x-3,y,z))  &
+                            +dfilt8(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
+                            +dfilt8(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                            +dfilt8(0)*Ut(:,x,y,z) )
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine filtrage8x
 !******************************************************************
 !
@@ -3763,38 +3696,37 @@ end subroutine filtrage8x
 !******************************************************************
 !******************************************************************
 subroutine filtrage8y
-  !
-  !***** Filtrage des champs dans la direction y
-  !******************************************************************
-  !******************************************************************
-  use mod_filtrage
-  use mod_vectors
-  use mod_scheme
-  implicit none
-  integer :: x,y,z,i,j
-  !
-  !
-  !///// FILTRAGE EN Y DES POINTS INTERIEURS
-  !
-  !
-!$OMP DO SCHEDULE(STATIC)   collapse(3) ! IMPORTANT
-     do z=zfmin_y,zfmax_y
-        do y=yfmin_y,yfmax_y
-           do x=xfmin_y,xfmax_y
-  do i=1,5
-              Un(i,x,y,z) = Ut(i,x,y,z) - cfy*                &
-                   ( dfilt8(4)*(Ut(i,x,y+4,z)+Ut(i,x,y-4,z))  &
-                    +dfilt8(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
-                    +dfilt8(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
-                    +dfilt8(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                    +dfilt8(0)*Ut(i,x,y,z) )
-           end do
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-  !
-  !
+!
+!***** Filtrage des champs dans la direction y
+!******************************************************************
+!******************************************************************
+   use mod_filtrage
+   use mod_vectors
+   use mod_scheme
+   implicit none
+   integer :: x,y,z,i,j
+!
+!
+!///// FILTRAGE EN Y DES POINTS INTERIEURS
+!
+!
+!$OMP DO SCHEDULE(static) collapse(2)
+      do z=zfmin_y,zfmax_y
+         do y=yfmin_y,yfmax_y
+!$OMP SIMD 
+            do x=xfmin_y,xfmax_y
+               Un(:,x,y,z) = Ut(:,x,y,z) - cfy*                  &
+                          ( dfilt8(4)*(Ut(:,x,y+4,z)+Ut(:,x,y-4,z))  &
+                           +dfilt8(3)*(Ut(:,x,y+3,z)+Ut(:,x,y-3,z))  &
+                           +dfilt8(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
+                           +dfilt8(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                           +dfilt8(0)*Ut(:,x,y,z) )
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine filtrage8y
 !******************************************************************
 !
@@ -3804,38 +3736,37 @@ end subroutine filtrage8y
 !******************************************************************
 !******************************************************************
 subroutine filtrage8z
-  !
-  !***** Filtrage des champs dans la direction z
-  !******************************************************************
-  !******************************************************************
-  use mod_filtrage
-  use mod_vectors
-  use mod_scheme
-  implicit none
-  integer :: x,y,z,i,j
-  !
-  !
-  !///// FILTRAGE EN Z DES POINTS INTERIEURS
-  !
-  !
-!$OMP DO SCHEDULE(STATIC)   collapse(3) ! IMPORTANT
-     do z=zfmin_z,zfmax_z
-        do y=yfmin_z,yfmax_z
-           do x=xfmin_z,xfmax_z
-  do i=1,5
-              Un(i,x,y,z) = Ut(i,x,y,z) - cfz*                &
-                   ( dfilt8(4)*(Ut(i,x,y,z+4)+Ut(i,x,y,z-4))  &
-                    +dfilt8(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
-                    +dfilt8(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
-                    +dfilt8(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                    +dfilt8(0)*Ut(i,x,y,z) )
-           end do
-        end do
-     end do
-  end do
-!$OMP END  DO nowait
-  !
-  !
+!
+!***** Filtrage des champs dans la direction z
+!******************************************************************
+!******************************************************************
+   use mod_filtrage
+   use mod_vectors
+   use mod_scheme
+   implicit none
+   integer :: x,y,z,i,j
+!
+!
+!///// FILTRAGE EN Z DES POINTS INTERIEURS
+!
+!
+!$OMP DO SCHEDULE(static) collapse(2)
+      do z=zfmin_z,zfmax_z
+         do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+            do x=xfmin_z,xfmax_z
+               Un(:,x,y,z) = Ut(:,x,y,z) - cfz*                  &
+                          ( dfilt8(4)*(Ut(:,x,y,z+4)+Ut(:,x,y,z-4))  &
+                           +dfilt8(3)*(Ut(:,x,y,z+3)+Ut(:,x,y,z-3))  &
+                           +dfilt8(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
+                           +dfilt8(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                           +dfilt8(0)*Ut(:,x,y,z) )
+         end do
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine filtrage8z
 !******************************************************************
 !
@@ -3845,154 +3776,124 @@ end subroutine filtrage8z
 !******************************************************************
 !******************************************************************
 subroutine filtragex_sup
-  !
-  !***** Filtrage additionel en x sur les bords
-  !******************************************************************
-  !******************************************************************
-  use mod_filtrage
-  use mod_vectors
-  use mod_scheme
-  implicit none
-  integer :: x,y,z,i,j
-  !
-  !
-  !// Points droits (x=nx ; x=nx+1 ; x=nx+2)
-  !
-  !
-  x=nx
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*               &
-                ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
-                 +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
-                 +dfilt6(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                 +dfilt6(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  x=nx+1
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*               &
-                ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
-                 +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                 +dfilt4(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  x=nx+2
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*               &
-                ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                 +dfilt2(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  x=nx+3
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x-1,y,z))
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  !
-  !// Points gauches  (x=1 ; x=0 ; x=-1)
-  !
-  !
-  x=1
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*               &
-                ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
-                 +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
-                 +dfilt6(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                 +dfilt6(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  x=0
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*               &
-                ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
-                 +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                 +dfilt4(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  x=-1
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*               &
-                ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
-                 +dfilt2(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  !
-  x=-2
-!$OMP DO SCHEDULE(static) collapse(3)
-     do z=zfmin_x,zfmax_x
-        do y=yfmin_x,yfmax_x
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x+1,y,z))
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  !
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_x,zfmax_x
-     do y=yfmin_x,yfmax_x
-!$OMP SIMD
-        do x=-2,1
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP END do nowait
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_x,zfmax_x
-     do y=yfmin_x,yfmax_x
-!$OMP SIMD
-        do x=nx,nx+3
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP END do nowait
-!$OMP BARRIER
+!
+!***** Filtrage additionel en x sur les bords
+!******************************************************************
+!******************************************************************
+   use mod_filtrage
+   use mod_vectors
+   use mod_scheme
+   implicit none
+   integer :: x,y,z,i,j
+!
+!
+!// Points droits (x=nx ; x=nx+1 ; x=nx+2)
+!
+!
+   x=nx
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx6*                         &
+                          ( dfilt6(3)*(Ut(:,x+3,y,z)+Ut(:,x-3,y,z))  &
+                           +dfilt6(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
+                           +dfilt6(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                           +dfilt6(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   x=nx+1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx4*                       &
+                         ( dfilt4(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
+                          +dfilt4(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                          +dfilt4(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   x=nx+2
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx2*                        &
+                         ( dfilt2(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                          +dfilt2(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   x=nx+3
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx1*0.5*(Ut(:,x,y,z)-Ut(:,x-1,y,z))
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
+!// Points gauches  (x=1 ; x=0 ; x=-1)
+!
+!
+   x=1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx6*                         &
+                          ( dfilt6(3)*(Ut(:,x+3,y,z)+Ut(:,x-3,y,z))  &
+                           +dfilt6(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
+                           +dfilt6(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                           +dfilt6(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   x=0
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx4*                       &
+                         ( dfilt4(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
+                          +dfilt4(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                          +dfilt4(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   x=-1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx2*                        &
+                         ( dfilt2(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
+                          +dfilt2(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
+   x=-2
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_x,zfmax_x
+!$OMP SIMD 
+         do y=yfmin_x,yfmax_x
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfx1*0.5*(Ut(:,x,y,z)-Ut(:,x+1,y,z))
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine filtragex_sup
 !******************************************************************
 !
@@ -4002,153 +3903,123 @@ end subroutine filtragex_sup
 !******************************************************************
 !******************************************************************
 subroutine filtragey_sup
-  !
-  !***** Filtrage additionel en y sur les bords
-  !******************************************************************
-  !******************************************************************
-  use mod_filtrage
-  use mod_vectors
-  use mod_scheme
-  implicit none
-  integer :: x,y,z,i,j
-  !
-  !
-  !// Points hauts (y=ny; y=ny+1; y=ny+2)
-  !
-  !
-  y=ny
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*               &
-                ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
-                 +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
-                 +dfilt6(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                +dfilt6(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  y=ny+1
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*               &
-                ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
-                 +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                 +dfilt4(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  y=ny+2
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*               &
-                ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                 +dfilt2(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  y=ny+3
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y-1,z))
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  !
-  !// Points bas (y=1; y=0; y=-1)
-  !
-  !
-  y=1
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*               &
-                ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
-                 +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
-                 +dfilt6(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                 +dfilt6(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  y=0
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*               &
-                ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
-                 +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                 +dfilt4(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  y=-1
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*               &
-                ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
-                 +dfilt2(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  y=-2
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do z=zfmin_y,zfmax_y
-        do x=xfmin_y,xfmax_y
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y+1,z))
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  !
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_y,zfmax_y
-     do y=-2,1
-!$OMP SIMD
-        do x=xfmin_y,xfmax_y
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP END do nowait
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_y,zfmax_y
-     do y=ny,ny+3
-!$OMP SIMD
-        do x=xfmin_y,xfmax_y
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP END do nowait
-!$OMP BARRIER
+!
+!***** Filtrage additionel en y sur les bords
+!******************************************************************
+!******************************************************************
+   use mod_filtrage
+   use mod_vectors
+   use mod_scheme
+   implicit none
+   integer :: x,y,z,i,j
+!
+!
+!// Points hauts (y=ny; y=ny+1; y=ny+2)
+!
+!
+   y=ny
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy6*                         &
+                          ( dfilt6(3)*(Ut(:,x,y+3,z)+Ut(:,x,y-3,z))  &
+                           +dfilt6(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
+                           +dfilt6(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                           +dfilt6(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   y=ny+1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy4*                        &
+                         ( dfilt4(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
+                          +dfilt4(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                          +dfilt4(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   y=ny+2
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy2*                        &
+                         ( dfilt2(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                          +dfilt2(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   y=ny+3
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy1*0.5*(Ut(:,x,y,z)-Ut(:,x,y-1,z))
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
+!// Points bas (y=1; y=0; y=-1)
+!
+!
+   y=1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy6*                         &
+                          ( dfilt6(3)*(Ut(:,x,y+3,z)+Ut(:,x,y-3,z))  &
+                           +dfilt6(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
+                           +dfilt6(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                           +dfilt6(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   y=0
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy4*                        &
+                         ( dfilt4(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
+                          +dfilt4(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                          +dfilt4(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   y=-1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy2*                        &
+                         ( dfilt2(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
+                          +dfilt2(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   y=-2
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do z=zfmin_y,zfmax_y
+!$OMP SIMD 
+         do x=xfmin_y,xfmax_y
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfy1*0.5*(Ut(:,x,y,z)-Ut(:,x,y+1,z))
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine filtragey_sup
 !******************************************************************
 !
@@ -4158,151 +4029,122 @@ end subroutine filtragey_sup
 !******************************************************************
 !******************************************************************
 subroutine filtragez_sup
-  !
-  !***** Filtrage additionel en z sur les bords
-  !******************************************************************
-  !******************************************************************
-  use mod_filtrage
-  use mod_vectors
-  use mod_scheme
-  implicit none
-  integer :: x,y,z,i,j
-  !
-  !
-  !// Points avant (z=nz; z=nz+1; z=nz+2)
-  !
-  !
-  z=nz
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*               &
-                ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
-                 +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
-                 +dfilt6(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                 +dfilt6(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  z=nz+1
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*               &
-                ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
-                 +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                 +dfilt4(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  z=nz+2
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*               &
-                ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                 +dfilt2(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  z=nz+3
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z-1))
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  !// Points arrieres (z=1; z=0; z=-1)
-  !
-  !
-  z=1
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*               &
-                ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
-                 +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
-                 +dfilt6(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                 +dfilt6(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  z=0
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*               &
-                ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
-                 +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                 +dfilt4(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  z=-1
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*               &
-                ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
-                 +dfilt2(0)*Ut(i,x,y,z) )
-        end do
-     end do
-  end do
-!$OMP END do nowait
-  !
-  z=-2
-!$OMP DO SCHEDULE(STATIC) collapse(3)
-     do y=yfmin_z,yfmax_z
-        do x=xfmin_z,xfmax_z
-  do i=1,5
-           Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z+1))
-        end do
-     end do
-  end do
-  !
-  !
-!$OMP BARRIER
-!!$OMP DO SCHEDULE(static) collapse(2)
-!  do z=-2,1
-!     do y=yfmin_z,yfmax_z
-!!$OMP SIMD
-!        do x=xfmin_z,xfmax_z
-!        Ut(:,x,y,z)=Un(:,x,y,z)
-!enddo
-!enddo
-!enddo
-!!$OMP END do nowait
-!!$OMP DO SCHEDULE(static) collapse(2)
-!  do z=nz,nz+3
-!     do y=yfmin_z,yfmax_z
-!!$OMP SIMD
-!        do x=xfmin_z,xfmax_z
-!        Ut(:,x,y,z)=Un(:,x,y,z)
-!enddo
-!enddo
-!enddo
-!!$OMP END do nowait
-!!$OMP BARRIER
+!
+!***** Filtrage additionel en z sur les bords
+!******************************************************************
+!******************************************************************
+   use mod_filtrage
+   use mod_vectors
+   use mod_scheme
+   implicit none
+   integer :: x,y,z,i,j
+!
+!
+!// Points avant (z=nz; z=nz+1; z=nz+2)
+!
+!
+   z=nz
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz6*                         &
+                          ( dfilt6(3)*(Ut(:,x,y,z+3)+Ut(:,x,y,z-3))  &
+                           +dfilt6(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
+                           +dfilt6(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                           +dfilt6(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   z=nz+1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz4*                        &
+                         ( dfilt4(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
+                          +dfilt4(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                          +dfilt4(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   z=nz+2
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz2*                        &
+                         ( dfilt2(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                          +dfilt2(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   z=nz+3
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz1*0.5*(Ut(:,x,y,z)-Ut(:,x,y,z-1))
+         end do
+   end do
+!$OMP end DO nowait
+!
+!// Points arrieres (z=1; z=0; z=-1)
+!
+!
+   z=1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz6*                         &
+                          ( dfilt6(3)*(Ut(:,x,y,z+3)+Ut(:,x,y,z-3))  &
+                           +dfilt6(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
+                           +dfilt6(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                           +dfilt6(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   z=0
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz4*                        &
+                         ( dfilt4(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
+                          +dfilt4(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                          +dfilt4(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   z=-1
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz2*                        &
+                         ( dfilt2(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
+                          +dfilt2(0)*Ut(:,x,y,z) )
+      end do
+   end do
+!$OMP end DO nowait
+!
+   z=-2
+!$OMP DO SCHEDULE(static) !collapse(2)
+      do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+         do x=xfmin_z,xfmax_z
+            Un(:,x,y,z) = Ut(:,x,y,z) - cfz1*0.5*(Ut(:,x,y,z)-Ut(:,x,y,z+1))
+      end do
+   end do
+!$OMP end DO nowait
+!
+!
 end subroutine filtragez_sup
 !******************************************************************
 !
@@ -4325,7 +4167,7 @@ subroutine fluxes
 !$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD
+!$OMP SIMD 
         do x=-2,nx+3
   E(1,x,y,z) = uo(x,y,z)*Un(1,x,y,z)+Un(2,x,y,z)
   E(2,x,y,z) = uo(x,y,z)*Un(2,x,y,z)+Un(5,x,y,z)
@@ -4364,7 +4206,7 @@ subroutine fluxes
 enddo
 enddo
 enddo
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
 end subroutine fluxes
 !******************************************************************
@@ -4394,7 +4236,7 @@ subroutine ts(irk)
 !$OMP DO SCHEDULE(static)
      do z=-2,nz+3
         do y=-2,ny+3
-!$OMP SIMD
+!$OMP SIMD 
            do x=-2,nx+3   
               S(1,x,y,z) = amp * sin(omega*(time+ck(irk)*deltat)) &
                                * exp(-alpha*(xg(x)**2 + yg(y)**2 + zg(z)**2))                
@@ -4402,7 +4244,7 @@ subroutine ts(irk)
            end do
         end do
      end do
-!$OMP END DO nowait
+!$OMP end DO nowait
   end if
   !
   !
@@ -4978,10 +4820,9 @@ subroutine calculvort
   !
   !
   VORT=0.
-!$OMP DO SCHEDULE(static)
+!$OMP DO SCHEDULE(static) 
   do z=1,nz
      do y=1,ny
-!$OMP SIMD
         do x=1,nx
            do j=-3,3
               VORT(1,x,y,z) = VORT(1,x,y,z) + dyg(y)*a(j)*U(4,x,y+j,z)          &
@@ -4994,7 +4835,7 @@ subroutine calculvort
         end do
      end do
   end do
-!$OMP END do nowait
+!$OMP end DO nowait
 !$OMP BARRIER
   !
   !
