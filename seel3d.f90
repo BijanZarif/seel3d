@@ -26,6 +26,41 @@ module mod_grille
   real :: time
 end module mod_grille
 !
+module ht_tools
+  use omp_lib
+  implicit none
+!#include "vt_user.inc"
+  integer :: nt,mid
+  integer,pointer :: step(:)
+contains
+
+subroutine start_WIP(step,id,rank)
+implicit none
+integer,intent(inout),pointer :: step(:)
+integer,intent(in) :: id,rank
+
+if(.not.maxval(step)>id) then
+ step(rank)=-id
+endif
+
+end subroutine start_WIP
+
+subroutine end_WIP(step,id,rank)
+implicit none
+integer,intent(inout),pointer :: step(:)
+integer,intent(in) :: id,rank
+
+step(rank)=id+1
+
+if(minval(step)>-id) then
+ step(rank)=id+2
+endif
+do while(maxval(step)<id+2) ; enddo
+
+end subroutine end_WIP
+
+end module ht_tools
+
 module mod_scheme
   implicit none
   real a(-3:3),a24(7),a15(7),a06(7)
@@ -221,9 +256,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=51!101
-     ny=51!101
-     nz=51!101
+     nx=101
+     ny=101
+     nz=101
      ntfin=200
      record_step=500
      mo=0.5
@@ -537,15 +572,28 @@ subroutine integ
   use mod_condlim
   use mod_vectors
   use mod_record
+  use ht_tools
   implicit none
-  integer :: itime,irk,x,y,z,j
+  integer :: itime,irk,x,y,z,j,ht_rank
   !
   !
   call sauveparametre
   !
-!$OMP PARALLEL
+!$OMP PARALLEL !default(none) private(ht_rank,time,nt,x,y,z,irk) &
+!!$OMP shared(step,nx,ny,nz,nt0,ntfin,nrk,ibc_right,ut,o_damping,o_damping_sup,un,u) &
+!!$OMP shared(XFMIN_X,XFMIN_y,XFMIN_z,yFMIN_X,yFMIN_y,yFMIN_z,zFMIN_X,zFMIN_y,zFMIN_z) &
+!!$OMP shared(XFMax_X,XFMax_y,XFMax_z,yFMax_X,yFMax_y,yFMax_z,zFMax_X,zFMax_y,zFMax_z) &
+!!$OMP shared(deltat) 
 
-!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+nt=OMP_get_num_threads()
+ht_rank=OMP_get_thread_num()
+!$OMP single
+print*, "Nombre de Thread : ",nt
+allocate (step(0:nt-1))
+step=0
+!$OMP end single
+
+!$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
         do x=-2,nx+3
@@ -553,17 +601,21 @@ subroutine integ
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
   !
   do itime=nt0,ntfin
 
      call set_champ(itime) 
      call record(itime)           
      do irk=1,nrk
+
+!        call start_WIP(step,10*irk,ht_rank)
         call ts(irk)                ! calcul de S
         call fluxes                 ! Un -> E,F,G,H
-
-!$OMP BARRIER
+!        call end_WIP(step,10*irk,ht_rank)
+!!$OMP BARRIER
+!        call start_WIP(step,10*irk+4,ht_rank)
         call ptsint(irk)            ! U +      E,F,G,H,S -> Ut
         !// FACES                   ! U + Un + E,F,G,H,S -> Ut
         call ptsright(irk,ibc_right)
@@ -594,8 +646,11 @@ enddo
         call pts_c_topleftback(irk)
         call pts_c_bottomleftfront(irk)
         call pts_c_bottomleftback(irk)
-!$OMP BARRIER
-!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+!        call end_WIP(step,10*irk+4,ht_rank)
+!!$OMP BARRIER
+
+
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
         do x=-2,nx+3
@@ -603,12 +658,16 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do 
+!$OMP END do nowait
+!$OMP BARRIER
      end do
+
+!step=0
+
      if (o_damping) then
         call filtrage8x          !!rem: entree Ut --> sortie: Un
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static)  collapse(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
         do x=xfmin_x,xfmax_x
@@ -616,10 +675,11 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
         call filtrage8y          !!rem: entree Ut --> sortie: Un
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=yfmin_y,yfmax_y
         do x=xfmin_y,xfmax_y
@@ -627,10 +687,11 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
         call filtrage8z          !!rem: entree Ut --> sortie: Un 
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_z,zfmax_z
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
@@ -638,7 +699,8 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
         !
         if(o_damping_sup) then
            call filtragex_sup
@@ -647,7 +709,7 @@ enddo
         end if
      end if
 
-!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+!$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
         do x=-2,nx+3
@@ -655,7 +717,8 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
      time=time+deltat
   end do
 !$OMP END PARALLEL
@@ -947,7 +1010,7 @@ subroutine set_champ(itime)
   !!///// Pulse de pression
   if (itime.eq.0) then
      if (icas==100) then
-!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+!$OMP DO SCHEDULE(static) 
         do z=1,nz
            do y=1,ny
               do x=1,nx
@@ -957,8 +1020,9 @@ subroutine set_champ(itime)
               end do
            end do
         end do
-!$OMP END DO 
-!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+!$OMP END do nowait
+!$OMP BARRIER 
+!$OMP DO SCHEDULE(static)
   do z=-2,nz+3
      do y=-2,ny+3
         do x=-2,nx+3
@@ -966,7 +1030,8 @@ subroutine set_champ(itime)
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
      end if
   end if
   !
@@ -990,7 +1055,10 @@ subroutine ptsint(irk)
   real :: CC(5),DDx(5),DDy(5),DDz(5)
   integer :: irk,x,y,z
   !
-!$OMP DO SCHEDULE(dynamic,1)  collapse(2)
+
+
+
+!$OMP DO SCHEDULE(static) collapse(2)
      do z=1,nz
         do y=1,ny
            do x=1,nx
@@ -1208,6 +1276,11 @@ subroutine ptsleft(irk)
      end do
   end do
 !$OMP END DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsleft
 !******************************************************************
@@ -1300,6 +1373,11 @@ subroutine ptstop(irk)
      end do
   end do
 !$OMP END DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   ! 
 end subroutine ptstop
 !******************************************************************
@@ -1393,6 +1471,11 @@ subroutine ptsbot(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
   !
 end subroutine ptsbot
@@ -1487,6 +1570,11 @@ subroutine ptsback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
   !
 end subroutine ptsback
@@ -1582,6 +1670,11 @@ subroutine ptsfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsfront
 !******************************************************************
@@ -1679,6 +1772,11 @@ subroutine ptsbottomleft(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsbottomleft
 !******************************************************************
@@ -1776,6 +1874,11 @@ subroutine ptsbottomback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsbottomback
 !******************************************************************
@@ -1873,6 +1976,11 @@ subroutine ptsleftback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsleftback
 !******************************************************************
@@ -1970,6 +2078,11 @@ subroutine ptstopright(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptstopright
 !******************************************************************
@@ -2068,6 +2181,11 @@ subroutine ptsbottomright(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsbottomright
 !******************************************************************
@@ -2165,6 +2283,11 @@ subroutine ptstopleft(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
   !
 end subroutine ptstopleft
@@ -2263,6 +2386,11 @@ subroutine ptstopback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
   !
 end subroutine ptstopback
@@ -2361,6 +2489,11 @@ subroutine ptsrightback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsrightback
 !******************************************************************
@@ -2458,6 +2591,11 @@ subroutine ptsrightfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsrightfront
 !******************************************************************
@@ -2555,6 +2693,11 @@ subroutine ptsleftfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsleftfront
 !******************************************************************
@@ -2652,6 +2795,11 @@ subroutine ptsbottomfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptsbottomfront
 !******************************************************************
@@ -2749,6 +2897,11 @@ subroutine ptstopfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine ptstopfront
 !******************************************************************
@@ -2850,6 +3003,11 @@ subroutine pts_c_bottomleftback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_bottomleftback
 !******************************************************************
@@ -2951,6 +3109,11 @@ subroutine pts_c_bottomrightback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_bottomrightback
 !******************************************************************
@@ -3052,6 +3215,11 @@ subroutine pts_c_toprightback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_toprightback
 !******************************************************************
@@ -3153,6 +3321,11 @@ subroutine pts_c_topleftback(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_topleftback
 !******************************************************************
@@ -3254,6 +3427,11 @@ subroutine pts_c_bottomleftfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_bottomleftfront
 !******************************************************************
@@ -3355,6 +3533,11 @@ subroutine pts_c_bottomrightfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_bottomrightfront
 !******************************************************************
@@ -3456,6 +3639,11 @@ subroutine pts_c_toprightfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_toprightfront
 !******************************************************************
@@ -3557,6 +3745,11 @@ subroutine pts_c_topleftfront(irk)
      end do
   end do
 !$OMP END  DO nowait
+!$OMP BARRIER
+
+!  enddo
+!  enddo
+!  enddo
   !
 end subroutine pts_c_topleftfront
 !******************************************************************
@@ -3581,7 +3774,7 @@ subroutine filtrage8x
   !///// FILTRAGE EN X DES POINTS INTERIEURS
   !
   !
-!$OMP DO SCHEDULE(static)  collapse(4)
+!$OMP DO SCHEDULE(STATIC)   collapse(3) ! IMPORTANT
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
            do x=xfmin_x,xfmax_x  
@@ -3622,7 +3815,7 @@ subroutine filtrage8y
   !///// FILTRAGE EN Y DES POINTS INTERIEURS
   !
   !
-!$OMP DO SCHEDULE(STATIC) collapse(4)
+!$OMP DO SCHEDULE(STATIC)   collapse(3) ! IMPORTANT
      do z=zfmin_y,zfmax_y
         do y=yfmin_y,yfmax_y
            do x=xfmin_y,xfmax_y
@@ -3663,7 +3856,7 @@ subroutine filtrage8z
   !///// FILTRAGE EN Z DES POINTS INTERIEURS
   !
   !
-!$OMP DO SCHEDULE(STATIC) collapse(4)
+!$OMP DO SCHEDULE(STATIC)   collapse(3) ! IMPORTANT
      do z=zfmin_z,zfmax_z
         do y=yfmin_z,yfmax_z
            do x=xfmin_z,xfmax_z
@@ -3834,7 +4027,8 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
 end subroutine filtragex_sup
 !******************************************************************
 !
@@ -3970,7 +4164,7 @@ subroutine filtragey_sup
   !
   !
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=-2,1
         do x=xfmin_y,xfmax_y
@@ -3979,7 +4173,7 @@ enddo
 enddo
 enddo
 !$OMP END do nowait
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=zfmin_y,zfmax_y
      do y=ny,ny+3
         do x=xfmin_y,xfmax_y
@@ -3987,7 +4181,8 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
 end subroutine filtragey_sup
 !******************************************************************
 !
@@ -4121,7 +4316,7 @@ subroutine filtragez_sup
   !
   !
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,1
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
@@ -4130,7 +4325,7 @@ enddo
 enddo
 enddo
 !$OMP END do nowait
-!$OMP DO SCHEDULE(static) collapse(3)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=nz,nz+3
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
@@ -4138,7 +4333,8 @@ enddo
 enddo
 enddo
 enddo
-!$OMP END do
+!$OMP END do nowait
+!$OMP BARRIER
 end subroutine filtragez_sup
 !******************************************************************
 !
@@ -4199,7 +4395,8 @@ subroutine fluxes
 enddo
 enddo
 enddo
-!$OMP END DO nowait
+!$OMP END do nowait
+!$OMP BARRIER
 end subroutine fluxes
 !******************************************************************
 !
@@ -4225,7 +4422,7 @@ subroutine ts(irk)
   !
   !!///// Monopole avec ou sans ecoulement
   if (icas==120) then
-!$OMP DO SCHEDULE(dynamic,1)  collapse(2)
+!$OMP DO SCHEDULE(static)
      do z=-2,nz+3
         do y=-2,ny+3
            do x=-2,nx+3   
@@ -4560,11 +4757,11 @@ subroutine record(itime)
   !      if(itime.eq.ntfin) then
   !         fichier_a_ecrire=trim("bin_residu_p")//extension
   !         write(6,*) 'Enregistrement du residu de pression.' 
-  !        open(501,file=fichier_a_ecrire,form='unformatted',status='unknown')
-  !         write(501) record_dummy
-  !         write(501) (residu(i),i=0,ntfin)
-  !         write(501) record_dummy
-  !         close(501)
+  !        open(504,file=fichier_a_ecrire,form='unformatted',status='unknown')
+  !         write(504) record_dummy
+  !         write(504) (residu(i),i=0,ntfin)
+  !         write(504) record_dummy
+  !         close(504)
   !   endif
   !
   !!///// SAUVEGARDE A TOUS LES PAS DE TEMPS
@@ -4811,7 +5008,7 @@ subroutine calculvort
   !
   !
   VORT=0.
-!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+!$OMP DO SCHEDULE(static) 
   do z=1,nz
      do y=1,ny
         do x=1,nx
@@ -4826,7 +5023,8 @@ subroutine calculvort
         end do
      end do
   end do
-!$OMP END DO
+!$OMP END do nowait
+!$OMP BARRIER
   !
   !
 end subroutine calculvort
