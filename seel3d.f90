@@ -97,6 +97,7 @@ module mod_record
   integer :: irecord=1   !!!valeur par defaut, modifiee si redemarrage
   integer :: nxrect,nyrect,nzrect
 end module mod_record
+
 !
 !
 !
@@ -125,6 +126,7 @@ program seel2d
   use mod_onde
   use mod_vectors
   implicit none
+integer :: Time_1,clock_rate,Time_2
   !
   call setcas
   call inivar
@@ -135,7 +137,10 @@ program seel2d
   call affichage
   !
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
+call system_clock(Time_1,clock_rate)
   call integ
+CALL system_clock(Time_2)
+ print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate
   call record_for_restart   
   call closevar
   write(6,*) '////////////////////////// FIN PROGRAMME ///////////////////////////'
@@ -165,7 +170,6 @@ subroutine setcas
   use mod_record
   !
   implicit none
-  integer :: i
   !
   !
   !!///// CONDITIONS PAR DEFAUT
@@ -303,7 +307,6 @@ subroutine affichage
   use mod_record
   !
   implicit none
-  integer :: i,x
   !
 27 format(A39,I4)
 28 format(A39,G11.4)
@@ -364,7 +367,6 @@ subroutine ecoulmoyen
   use mod_onde
   use mod_vectors
   implicit none
-  real beta,Umax
   integer x,y,z,i
   logical :: gradient
 
@@ -374,7 +376,7 @@ subroutine ecoulmoyen
   !
   !///// ECOULEMENT MOYEN SI NECESSAIRE PAR DEFAUT
   !
-  rhoo=1.
+  rhoo=1./1.
   uo=mo
   vo=0.
   wo=0.
@@ -506,9 +508,9 @@ subroutine pastemps
         do z=-2,nz+2
            dzmin = min( dzmin,zg(z+1)-zg(z) )
            dzmax = max( dzmax,zg(z+1)-zg(z) )
-           uopmax = max( uopmax,uo(x,y,z)+sqrt(gamma*po(x,y,z)/rhoo(x,y,z)) )
-           vopmax = max( vopmax,vo(x,y,z)+sqrt(gamma*po(x,y,z)/rhoo(x,y,z)) )
-           wopmax = max( wopmax,wo(x,y,z)+sqrt(gamma*po(x,y,z)/rhoo(x,y,z)) )
+           uopmax = max( uopmax,uo(x,y,z)+sqrt(gamma*po(x,y,z)*rhoo(x,y,z)) )
+           vopmax = max( vopmax,vo(x,y,z)+sqrt(gamma*po(x,y,z)*rhoo(x,y,z)) )
+           wopmax = max( wopmax,wo(x,y,z)+sqrt(gamma*po(x,y,z)*rhoo(x,y,z)) )
         end do
      end do
   end do
@@ -535,7 +537,7 @@ subroutine integ
   use mod_vectors
   use mod_record
   implicit none
-  integer :: i,itime,irk,x,y,z
+  integer :: itime,irk
   !
   !
   Un = U
@@ -604,8 +606,8 @@ subroutine integ
 
      U=Un
      time=time+deltat
-     print*,U(5,5,5,:)
   end do
+  print*,U(5,5,5,:)
   !
   !
 end subroutine integ
@@ -701,7 +703,7 @@ subroutine inivar
   dpoy=0.
   dpoz=0.
   !
-  rhoo=0.
+  rhoo=HUGE(1.)
   uo=0.
   vo=0.
   wo=0.
@@ -1034,9 +1036,9 @@ subroutine ptsright(irk,ibc)
               end do
            elseif(ibc==2) then
               DD(5) = vray * (xc*Dx(x,y,z,5) + yc*Dy(x,y,z,5)  + zc*Dz(x,y,z,5)  + Un(x,y,z,5)/r)
-              DD(2) = uo(x,y,z) * Dx(x,y,z,2) + vo(x,y,z)*Dy(x,y,z,2) + wo(x,y,z)*Dz(x,y,z,2) + Dx(x,y,z,5)/rhoo(x,y,z)
-              DD(3) = uo(x,y,z) * Dx(x,y,z,3) + vo(x,y,z)*Dy(x,y,z,3) + wo(x,y,z)*Dz(x,y,z,3) + Dy(x,y,z,5)/rhoo(x,y,z)
-              DD(4) = uo(x,y,z) * Dx(x,y,z,4) + vo(x,y,z)*Dy(x,y,z,4) + wo(x,y,z)*Dz(x,y,z,4) + Dz(x,y,z,5)/rhoo(x,y,z)
+              DD(2) = uo(x,y,z) * Dx(x,y,z,2) + vo(x,y,z)*Dy(x,y,z,2) + wo(x,y,z)*Dz(x,y,z,2) + Dx(x,y,z,5)*rhoo(x,y,z)
+              DD(3) = uo(x,y,z) * Dx(x,y,z,3) + vo(x,y,z)*Dy(x,y,z,3) + wo(x,y,z)*Dz(x,y,z,3) + Dy(x,y,z,5)*rhoo(x,y,z)
+              DD(4) = uo(x,y,z) * Dx(x,y,z,4) + vo(x,y,z)*Dy(x,y,z,4) + wo(x,y,z)*Dz(x,y,z,4) + Dz(x,y,z,5)*rhoo(x,y,z)
               DD(1) = uo(x,y,z) * Dx(x,y,z,1) + vo(x,y,z)*Dy(x,y,z,1) + wo(x,y,z)*Dz(x,y,z,1) &
                    + ( DD(5) - uo(x,y,z) * Dx(x,y,z,5) - vo(x,y,z)*Dy(x,y,z,5) - wo(x,y,z)*Dz(x,y,z,5) ) / coo(x,y,z)**2
            end if
@@ -3935,19 +3937,19 @@ subroutine fluxes
   E(:,:,:,2) = uo(:,:,:)*Un(:,:,:,2)+Un(:,:,:,5)
   E(:,:,:,3) = uo(:,:,:)*Un(:,:,:,3)
   E(:,:,:,4) = uo(:,:,:)*Un(:,:,:,4)
-  E(:,:,:,5) = uo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)/rhoo(:,:,:)*Un(:,:,:,2)
+  E(:,:,:,5) = uo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)*rhoo(:,:,:)*Un(:,:,:,2)
   !
   F(:,:,:,1) = vo(:,:,:)*Un(:,:,:,1)+Un(:,:,:,3)
   F(:,:,:,2) = vo(:,:,:)*Un(:,:,:,2)
   F(:,:,:,3) = vo(:,:,:)*Un(:,:,:,3)+Un(:,:,:,5)
   F(:,:,:,4) = vo(:,:,:)*Un(:,:,:,4)
-  F(:,:,:,5) = vo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)/rhoo(:,:,:)*Un(:,:,:,3)
+  F(:,:,:,5) = vo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)*rhoo(:,:,:)*Un(:,:,:,3)
 
   G(:,:,:,1) = wo(:,:,:)*Un(:,:,:,1)+Un(:,:,:,4)
   G(:,:,:,2) = wo(:,:,:)*Un(:,:,:,2)
   G(:,:,:,3) = wo(:,:,:)*Un(:,:,:,3)
   G(:,:,:,4) = wo(:,:,:)*Un(:,:,:,4)+Un(:,:,:,5)
-  G(:,:,:,5) = wo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)/rhoo(:,:,:)*Un(:,:,:,4)
+  G(:,:,:,5) = wo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)*rhoo(:,:,:)*Un(:,:,:,4)
   !
   H(:,:,:,1) = 0.
   H(:,:,:,2) = duox(:,:,:) * E(:,:,:,1)      &
@@ -3961,9 +3963,9 @@ subroutine fluxes
              + dwoz(:,:,:) * G(:,:,:,1)
 
   H(:,:,:,5) = (gamma-1.) * ( (duox(:,:,:)+dvoy(:,:,:)+dwoz(:,:,:))*Un(:,:,:,5)       &
-                             - dpox(:,:,:)/rhoo(:,:,:)*Un(:,:,:,2)                    &
-                             - dpoy(:,:,:)/rhoo(:,:,:)*Un(:,:,:,3)                    &
-                             - dpoz(:,:,:)/rhoo(:,:,:)*Un(:,:,:,4) )
+                             - dpox(:,:,:)*rhoo(:,:,:)*Un(:,:,:,2)                    &
+                             - dpoy(:,:,:)*rhoo(:,:,:)*Un(:,:,:,3)                    &
+                             - dpoz(:,:,:)*rhoo(:,:,:)*Un(:,:,:,4) )
   !
   !
 end subroutine fluxes
@@ -4023,7 +4025,6 @@ subroutine maillage
   use mod_grille
   implicit none
   integer :: i,j,x,y,z
-  real :: dx,dxmin,dxmax,dy,dymin,dymax,dz,dzmin,dzmax
   !
   !
   !//// MAILLAGE PAR DEFAUT
@@ -4238,7 +4239,7 @@ subroutine record(itime)
      write(6,*) 'Enregistrement champ moyen:',  '     t/T = ',time/(2.*pi/omega)
      open(501,file=fichier_a_ecrire,form='unformatted',status='unknown')
      write(501) record_dummy
-     write(501) (((rhoo(x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(501) (((1./rhoo(x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) (((uo(x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) (((vo(x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) (((wo(x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
