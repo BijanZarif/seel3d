@@ -221,7 +221,7 @@ subroutine setcas
       ny=26!101
       nz=26!101
       ntfin=200
-      record_step=20
+      record_step=500
       mo=0.5
       amp=0.001
       alpha=log(2.)/9.
