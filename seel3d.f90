@@ -137,10 +137,10 @@ integer :: Time_1,clock_rate,Time_2
   call affichage
   !
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
-call system_clock(Time_1,clock_rate)
+  call system_clock(Time_1,clock_rate)
   call integ
-CALL system_clock(Time_2)
- print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate
+  CALL system_clock(Time_2)
+  print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate
   call record_for_restart   
   call closevar
   write(6,*) '////////////////////////// FIN PROGRAMME ///////////////////////////'
@@ -955,7 +955,7 @@ end subroutine ptsint
 !
 !
 !
-!
+
 !******************************************************************
 !******************************************************************
 subroutine ptsright(irk,ibc)
