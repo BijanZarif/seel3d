@@ -23,7 +23,7 @@ module mod_grille
   real :: deltax,deltay,deltaz,deltat,CFL
   integer :: nymin,nymax,nxmax,nxray,nyray,nzray
   integer :: nt0,nx,ny,nz,ntfin,record_step
-  real :: time,arg
+  real :: time
 end module mod_grille
 !
 module mod_scheme
@@ -133,7 +133,7 @@ integer :: Time_1,clock_rate,Time_2
   call coeff_schemas
   call maillage
   call ecoulmoyen
-  call pastemps
+  call pastemps(deltat)
   call affichage
   !
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
@@ -221,9 +221,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=26!101
-     ny=26!101
-     nz=26!101
+     nx=51!101
+     ny=51!101
+     nz=51!101
      ntfin=200
      record_step=500
      mo=0.5
@@ -245,7 +245,7 @@ subroutine setcas
      nx=101
      ny=55
      nz=75
-     ntfin=500 !!5000 pour voir assez loin
+     ntfin= 500 !!5000 pour voir assez loin
      record_step=25
      mo=0.5
      omega=2*pi/10
@@ -475,7 +475,7 @@ end subroutine ecoulmoyen
 !
 !******************************************************************
 !******************************************************************
-subroutine pastemps
+pure subroutine pastemps(newdeltat)
   !
   ! Calcul du pas de temps (critere cfl)
   !
@@ -485,6 +485,7 @@ subroutine pastemps
   use mod_grille
   use mod_options
   implicit none
+  real,intent(out) ::newdeltat
   real :: uopmax,vopmax,dxmin,dxmax,dymin,dymax
   real :: wopmax,dzmin,dzmax
   integer :: x,y,z
@@ -515,7 +516,7 @@ subroutine pastemps
      end do
   end do
   !
-  deltat=CFL*min(dxmin/uopmax,dymin/vopmax,dzmin/wopmax)
+  newdeltat=CFL*min(dxmin/uopmax,dymin/vopmax,dzmin/wopmax)
 
 end subroutine pastemps
 !******************************************************************
@@ -537,24 +538,34 @@ subroutine integ
   use mod_vectors
   use mod_record
   implicit none
-  integer :: itime,irk
+  integer :: itime,irk,x,y,z,j
   !
-  !
-  Un = U
   !
   call sauveparametre
+  !
+!$OMP PARALLEL
+
+!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+  do z=-2,nz+3
+     do y=-2,ny+3
+        do x=-2,nx+3
+        Un(:,x,y,z)=U(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
   !
   do itime=nt0,ntfin
 
      call set_champ(itime) 
      call record(itime)           
-
      do irk=1,nrk
-        call ts(irk)
-        call fluxes
-        call ptsint(irk)
+        call ts(irk)                ! calcul de S
+        call fluxes                 ! Un -> E,F,G,H
 
-        !// FACES
+!$OMP BARRIER
+        call ptsint(irk)            ! U +      E,F,G,H,S -> Ut
+        !// FACES                   ! U + Un + E,F,G,H,S -> Ut
         call ptsright(irk,ibc_right)
         call ptsleft(irk)
         call ptsbot(irk)
@@ -583,30 +594,71 @@ subroutine integ
         call pts_c_topleftback(irk)
         call pts_c_bottomleftfront(irk)
         call pts_c_bottomleftback(irk)
-        !
-        Un=Ut
+!$OMP BARRIER
+!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+  do z=-2,nz+3
+     do y=-2,ny+3
+        do x=-2,nx+3
+        Un(:,x,y,z)=Ut(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do 
      end do
-
      if (o_damping) then
         call filtrage8x          !!rem: entree Ut --> sortie: Un
-        Ut=Un                    !!rem: la sortie du filtre en x est mise en entree du filtre en y
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+        do x=xfmin_x,xfmax_x
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
         call filtrage8y          !!rem: entree Ut --> sortie: Un
-        Ut=Un                    !!rem: la sortie du filtre en y est mise en entree du filtre en z 
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_y,zfmax_y
+     do y=yfmin_y,yfmax_y
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
         call filtrage8z          !!rem: entree Ut --> sortie: Un 
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_z,zfmax_z
+     do y=yfmin_z,yfmax_z
+        do x=xfmin_z,xfmax_z
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
         !
         if(o_damping_sup) then
-           Ut=Un
            call filtragex_sup
-           Ut=Un
            call filtragey_sup
-           Ut=Un
            call filtragez_sup
         end if
      end if
 
-     U=Un
+!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+  do z=-2,nz+3
+     do y=-2,ny+3
+        do x=-2,nx+3
+        U(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
      time=time+deltat
   end do
+!$OMP END PARALLEL
   print*,U(:,5,5,5)
   !
   !
@@ -718,24 +770,24 @@ subroutine inivar
      write(6,*) '*** LECTURE D''UN FICHIER RESTART ***'
      write(6,*) '***'
      write(6,*) 'Fichier lu: ', filename_load_restart
-     open(501,file=filename_load_restart,form='unformatted',status='unknown')
-     read(501) read_dummy
+     open(507,file=filename_load_restart,form='unformatted',status='unknown')
+     read(507) read_dummy
      write(6,*) '   check: read_dummy=', read_dummy
-     read(501) nt0_save
-     read(501) ntfin_save
-     read(501) irun_save
-     read(501) irecord_save
-     read(501) time_save
-     read(501) read_dummy
+     read(507) nt0_save
+     read(507) ntfin_save
+     read(507) irun_save
+     read(507) irecord_save
+     read(507) time_save
+     read(507) read_dummy
      write(6,*) '   check: read_dummy=', read_dummy
-     read(501) (((U(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) read_dummy
+     read(507) (((U(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) read_dummy
      write(6,*) '   check: read_dummy=', read_dummy
-     close(501)
+     close(507)
      !
      irun=irun_save+1
      nt0=ntfin_save+1
@@ -886,6 +938,7 @@ subroutine set_champ(itime)
   implicit none
   integer :: itime
   integer :: x,y,z
+  real    :: arg
   !
   !
   !///// CHAMP INITIAL
@@ -894,6 +947,7 @@ subroutine set_champ(itime)
   !!///// Pulse de pression
   if (itime.eq.0) then
      if (icas==100) then
+!$OMP DO SCHEDULE(dynamic,1) collapse(2)
         do z=1,nz
            do y=1,ny
               do x=1,nx
@@ -903,7 +957,16 @@ subroutine set_champ(itime)
               end do
            end do
         end do
-        Un=U
+!$OMP END DO 
+!$OMP DO SCHEDULE(dynamic,1) collapse(2)
+  do z=-2,nz+3
+     do y=-2,ny+3
+        do x=-2,nx+3
+        Un(:,x,y,z)=U(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
      end if
   end if
   !
@@ -925,11 +988,9 @@ subroutine ptsint(irk)
   use mod_vectors
   implicit none
   real :: CC(5),DDx(5),DDy(5),DDz(5)
-  integer :: irk,i,x,y,z
-  ! 
-!$OMP PARALLEL DO DEFAULT(NONE) &
-!$OMP PRIVATE(DDx,DDy,DDz,CC,x,y,z) &
-!$OMP SHARED(nz,ny,nx,a,E,F,G,dxg,dyg,dzg,H,S,deltat,rk,U,Ut,irk)
+  integer :: irk,x,y,z
+  !
+!$OMP DO SCHEDULE(dynamic,1)  collapse(2)
      do z=1,nz
         do y=1,ny
            do x=1,nx
@@ -950,7 +1011,7 @@ subroutine ptsint(irk)
            end do
         end do
      end do
-!$OMP END PARALLEL DO
+!$OMP END DO nowait
   !
 end subroutine ptsint
 !******************************************************************
@@ -1000,6 +1061,7 @@ subroutine ptsright(irk,ibc)
           +a(1)*(Un(:,nx+1:nx+3,1:ny,z+1) - Un(:,nx+1:nx+3,1:ny,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=1,ny
         do x=nx+1,nx+3
@@ -1052,6 +1114,7 @@ subroutine ptsright(irk,ibc)
         end do
      end do
   end do
+!$OMP END DO nowait
   !
 end subroutine ptsright
 !******************************************************************
@@ -1100,6 +1163,7 @@ subroutine ptsleft(irk)
           +a(1) * (Un(:,-2:0,1:ny,z+1) - Un(:,-2:0,1:ny,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=1,ny
         do x=-2,0
@@ -1143,6 +1207,7 @@ subroutine ptsleft(irk)
         end do
      end do
   end do
+!$OMP END DO nowait
   !
 end subroutine ptsleft
 !******************************************************************
@@ -1191,6 +1256,7 @@ subroutine ptstop(irk)
           +a(1)*(Un(:,1:nx,ny+1:ny+3,z+1)-Un(:,1:nx,ny+1:ny+3,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=ny+1,ny+3
         do x=1,nx
@@ -1233,6 +1299,7 @@ subroutine ptstop(irk)
         end do
      end do
   end do
+!$OMP END DO nowait
   ! 
 end subroutine ptstop
 !******************************************************************
@@ -1281,6 +1348,7 @@ subroutine ptsbot(irk)
           +a(1)*(Un(:,1:nx,-2:0,z+1)-Un(:,1:nx,-2:0,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=-2,0
         do x=1,nx
@@ -1324,6 +1392,7 @@ subroutine ptsbot(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine ptsbot
@@ -1373,6 +1442,7 @@ subroutine ptsback(irk)
           +a(1)*(Un(:,1:nx,y+1,-2:0)-Un(:,1:nx,y-1,-2:0))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do x=1,nx
         do y=1,ny
@@ -1416,6 +1486,7 @@ subroutine ptsback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine ptsback
@@ -1466,6 +1537,7 @@ subroutine ptsfront(irk)
           +a(1)*(Un(:,1:nx,y+1,nz+1:nz+3)-Un(:,1:nx,y-1,nz+1:nz+3))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=1,ny
         do x=1,nx
@@ -1509,6 +1581,7 @@ subroutine ptsfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsfront
 !******************************************************************
@@ -1561,6 +1634,7 @@ subroutine ptsbottomleft(irk)
           +a(1)*(Un(:,-2:0,-2:0,z+1) - Un(:,-2:0,-2:0,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=-2,0
         do x=-2,0
@@ -1604,6 +1678,7 @@ subroutine ptsbottomleft(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsbottomleft
 !******************************************************************
@@ -1656,6 +1731,7 @@ subroutine ptsbottomback(irk)
           +a(1)*(Un(:,x+1,-2:0,-2:0) - Un(:,x-1,-2:0,-2:0))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=-2,0
         do x=1,nx
@@ -1699,6 +1775,7 @@ subroutine ptsbottomback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsbottomback
 !******************************************************************
@@ -1751,6 +1828,7 @@ subroutine ptsleftback(irk)
           +a(1)*(Un(:,-2:0,y+1,-2:0) - Un(:,-2:0,y-1,-2:0))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=1,ny
         do x=-2,0
@@ -1794,6 +1872,7 @@ subroutine ptsleftback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsleftback
 !******************************************************************
@@ -1846,6 +1925,7 @@ subroutine ptstopright(irk)
           +a(1)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+1) - Un(:,nx+1:nx+3,ny+1:ny+3,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=ny+1,ny+3
         do x=nx+1,nx+3
@@ -1889,6 +1969,7 @@ subroutine ptstopright(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptstopright
 !******************************************************************
@@ -1942,6 +2023,7 @@ subroutine ptsbottomright(irk)
           +a(1)*(Un(:,nx+1:nx+3,-2:0,z+1) - Un(:,nx+1:nx+3,-2:0,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=-2,0
         do x=nx+1,nx+3
@@ -1985,6 +2067,7 @@ subroutine ptsbottomright(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsbottomright
 !******************************************************************
@@ -2037,6 +2120,7 @@ subroutine ptstopleft(irk)
           +a(1)*(Un(:,-2:0,ny+1:ny+3,z+1) - Un(:,-2:0,ny+1:ny+3,z-1))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=1,nz
      do y=ny+1,ny+3
         do x=-2,0
@@ -2080,6 +2164,7 @@ subroutine ptstopleft(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine ptstopleft
@@ -2133,6 +2218,7 @@ subroutine ptstopback(irk)
           +a(1)*(Un(:,x+1,ny+1:ny+3,-2:0) - Un(:,x-1,ny+1:ny+3,-2:0))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=ny+1,ny+3
         do x=1,nx
@@ -2176,6 +2262,7 @@ subroutine ptstopback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine ptstopback
@@ -2229,6 +2316,7 @@ subroutine ptsrightback(irk)
           +a(1)*(Un(:,nx+1:nx+3,y+1,-2:0) - Un(:,nx+1:nx+3,y-1,-2:0))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=1,ny
         do x=nx+1,nx+3
@@ -2272,6 +2360,7 @@ subroutine ptsrightback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsrightback
 !******************************************************************
@@ -2324,6 +2413,7 @@ subroutine ptsrightfront(irk)
           +a(1)*(Un(:,nx+1:nx+3,y+1,nz+1:nz+3) - Un(:,nx+1:nx+3,y-1,nz+1:nz+3))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=1,ny
         do x=nx+1,nx+3
@@ -2367,6 +2457,7 @@ subroutine ptsrightfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsrightfront
 !******************************************************************
@@ -2419,6 +2510,7 @@ subroutine ptsleftfront(irk)
           +a(1)*(Un(:,-2:0,y+1,nz+1:nz+3) - Un(:,-2:0,y-1,nz+1:nz+3))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=1,ny
         do x=-2,0
@@ -2462,6 +2554,7 @@ subroutine ptsleftfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsleftfront
 !******************************************************************
@@ -2514,6 +2607,7 @@ subroutine ptsbottomfront(irk)
           +a(1)*(Un(:,x+1,-2:0,nz+1:nz+3) - Un(:,x-1,-2:0,nz+1:nz+3))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=-2,0
         do x=1,nx
@@ -2557,6 +2651,7 @@ subroutine ptsbottomfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptsbottomfront
 !******************************************************************
@@ -2609,6 +2704,7 @@ subroutine ptstopfront(irk)
           +a(1)*(Un(:,x+1,ny+1:ny+3,nz+1:nz+3) - Un(:,x-1,ny+1:ny+3,nz+1:nz+3))
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=ny+1,ny+3
         do x=1,nx
@@ -2652,6 +2748,7 @@ subroutine ptstopfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine ptstopfront
 !******************************************************************
@@ -2708,6 +2805,7 @@ subroutine pts_c_bottomleftback(irk)
      Dz(:,-2:0,-2:0,-2)  = Dz(:,-2:0,-2:0,-2) + a06(1+j)*Un(:,-2:0,-2:0,-2+j)
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=-2,0
         do x=-2,0
@@ -2751,6 +2849,7 @@ subroutine pts_c_bottomleftback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_bottomleftback
 !******************************************************************
@@ -2807,6 +2906,7 @@ subroutine pts_c_bottomrightback(irk)
      Dz(:,nx+1:nx+3,-2:0,-2)  = Dz(:,nx+1:nx+3,-2:0,-2) + a06(1+j)*Un(:,nx+1:nx+3,-2:0,-2+j)
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=-2,0
         do x=nx+1,nx+3
@@ -2850,6 +2950,7 @@ subroutine pts_c_bottomrightback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_bottomrightback
 !******************************************************************
@@ -2906,6 +3007,7 @@ subroutine pts_c_toprightback(irk)
      Dz(:,nx+1:nx+3,ny+1:ny+3,-2)  = Dz(:,nx+1:nx+3,ny+1:ny+3,-2) + a06(1+j)*Un(:,nx+1:nx+3,ny+1:ny+3,-2+j)
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=ny+1,ny+3
         do x=nx+1,nx+3
@@ -2949,6 +3051,7 @@ subroutine pts_c_toprightback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_toprightback
 !******************************************************************
@@ -3005,6 +3108,7 @@ subroutine pts_c_topleftback(irk)
      Dz(:,-2:0,ny+1:ny+3,-2)  = Dz(:,-2:0,ny+1:ny+3,-2) + a06(1+j)*Un(:,-2:0,ny+1:ny+3,-2+j)
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=-2,0
      do y=ny+1,ny+3
         do x=-2,0
@@ -3048,6 +3152,7 @@ subroutine pts_c_topleftback(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_topleftback
 !******************************************************************
@@ -3104,6 +3209,7 @@ subroutine pts_c_bottomleftfront(irk)
      Dz(:,-2:0,-2:0,nz+3) = Dz(:,-2:0,-2:0,nz+3) - a06(1-j)*Un(:,-2:0,-2:0,nz+3+j) 
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do y=-2,0
      do z=nz+1,nz+3
         do x=-2,0
@@ -3147,6 +3253,7 @@ subroutine pts_c_bottomleftfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_bottomleftfront
 !******************************************************************
@@ -3203,6 +3310,7 @@ subroutine pts_c_bottomrightfront(irk)
      Dz(:,nx+1:nx+3,-2:0,nz+3) = Dz(:,nx+1:nx+3,-2:0,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,-2:0,nz+3+j) 
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=-2,0
         do x=nx+1,nx+3
@@ -3246,6 +3354,7 @@ subroutine pts_c_bottomrightfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_bottomrightfront
 !******************************************************************
@@ -3302,6 +3411,7 @@ subroutine pts_c_toprightfront(irk)
      Dz(:,nx+1:nx+3,ny+1:ny+3,nz+3) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+3+j) 
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=ny+1,ny+3
         do x=nx+1,nx+3
@@ -3345,6 +3455,7 @@ subroutine pts_c_toprightfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_toprightfront
 !******************************************************************
@@ -3401,6 +3512,7 @@ subroutine pts_c_topleftfront(irk)
      Dz(:,-2:0,ny+1:ny+3,nz+3) = Dz(:,-2:0,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,-2:0,ny+1:ny+3,nz+3+j) 
   end do
   !
+!$OMP DO SCHEDULE(static)  collapse(3)
   do z=nz+1,nz+3
      do y=ny+1,ny+3
         do x=-2,0
@@ -3444,6 +3556,7 @@ subroutine pts_c_topleftfront(irk)
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
 end subroutine pts_c_topleftfront
 !******************************************************************
@@ -3468,10 +3581,11 @@ subroutine filtrage8x
   !///// FILTRAGE EN X DES POINTS INTERIEURS
   !
   !
-  do i=1,5
+!$OMP DO SCHEDULE(static)  collapse(4)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           do x=xfmin_x,xfmax_x
+           do x=xfmin_x,xfmax_x  
+              do i=1,5
               Un(i,x,y,z) = Ut(i,x,y,z) - cfx*                &
                    ( dfilt8(4)*(Ut(i,x+4,y,z)+Ut(i,x-4,y,z))  &
                     +dfilt8(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
@@ -3482,6 +3596,7 @@ subroutine filtrage8x
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine filtrage8x
@@ -3507,10 +3622,11 @@ subroutine filtrage8y
   !///// FILTRAGE EN Y DES POINTS INTERIEURS
   !
   !
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(4)
      do z=zfmin_y,zfmax_y
         do y=yfmin_y,yfmax_y
            do x=xfmin_y,xfmax_y
+  do i=1,5
               Un(i,x,y,z) = Ut(i,x,y,z) - cfy*                &
                    ( dfilt8(4)*(Ut(i,x,y+4,z)+Ut(i,x,y-4,z))  &
                     +dfilt8(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
@@ -3521,6 +3637,7 @@ subroutine filtrage8y
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine filtrage8y
@@ -3546,10 +3663,11 @@ subroutine filtrage8z
   !///// FILTRAGE EN Z DES POINTS INTERIEURS
   !
   !
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(4)
      do z=zfmin_z,zfmax_z
         do y=yfmin_z,yfmax_z
            do x=xfmin_z,xfmax_z
+  do i=1,5
               Un(i,x,y,z) = Ut(i,x,y,z) - cfz*                &
                    ( dfilt8(4)*(Ut(i,x,y,z+4)+Ut(i,x,y,z-4))  &
                     +dfilt8(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
@@ -3560,6 +3678,7 @@ subroutine filtrage8z
         end do
      end do
   end do
+!$OMP END  DO nowait
   !
   !
 end subroutine filtrage8z
@@ -3586,9 +3705,10 @@ subroutine filtragex_sup
   !
   !
   x=nx
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*               &
                 ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
                  +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
@@ -3597,11 +3717,13 @@ subroutine filtragex_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   x=nx+1
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*               &
                 ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
                  +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
@@ -3609,35 +3731,41 @@ subroutine filtragex_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   x=nx+2
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*               &
                 ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
                  +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
+!$OMP END do nowait
   !
   x=nx+3
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x-1,y,z))
         end do
      end do
   end do
+!$OMP END do nowait
   !
   !
   !// Points gauches  (x=1 ; x=0 ; x=-1)
   !
   !
   x=1
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*               &
                 ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
                  +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
@@ -3646,11 +3774,13 @@ subroutine filtragex_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   x=0
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*               &
                 ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
                  +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
@@ -3658,29 +3788,53 @@ subroutine filtragex_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   x=-1
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*               &
                 ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
                  +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
+!$OMP END do nowait
   !
   !
   x=-2
-  do i=1,5
+!$OMP DO SCHEDULE(static) collapse(3)
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x+1,y,z))
         end do
      end do
   end do
+!$OMP END do nowait
   !
   !
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+        do x=-2,1
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do nowait
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+        do x=nx,nx+3
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
 end subroutine filtragex_sup
 !******************************************************************
 !
@@ -3705,9 +3859,10 @@ subroutine filtragey_sup
   !
   !
   y=ny
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*               &
                 ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
                  +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
@@ -3716,11 +3871,13 @@ subroutine filtragey_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   y=ny+1
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*               &
                 ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
                  +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
@@ -3728,35 +3885,41 @@ subroutine filtragey_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   y=ny+2
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*               &
                 ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
                  +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
+!$OMP END do nowait
   !
   y=ny+3
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y-1,z))
         end do
      end do
   end do
+!$OMP END do nowait
   !
   !
   !// Points bas (y=1; y=0; y=-1)
   !
   !
   y=1
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*               &
                 ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
                  +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
@@ -3765,11 +3928,13 @@ subroutine filtragey_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   y=0
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*               &
                 ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
                  +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
@@ -3777,28 +3942,52 @@ subroutine filtragey_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   y=-1
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*               &
                 ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
                  +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
+!$OMP END do nowait
   !
   y=-2
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y+1,z))
         end do
      end do
   end do
+!$OMP END do nowait
   !
   !
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_y,zfmax_y
+     do y=-2,1
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do nowait
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=zfmin_y,zfmax_y
+     do y=ny,ny+3
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
 end subroutine filtragey_sup
 !******************************************************************
 !
@@ -3823,9 +4012,10 @@ subroutine filtragez_sup
   !
   !
   z=nz
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*               &
                 ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
                  +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
@@ -3834,11 +4024,13 @@ subroutine filtragez_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   z=nz+1
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*               &
                 ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
                  +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
@@ -3846,34 +4038,40 @@ subroutine filtragez_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   z=nz+2
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*               &
                 ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
                  +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
+!$OMP END do nowait
   !
   z=nz+3
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z-1))
         end do
      end do
   end do
+!$OMP END do nowait
   !
   !// Points arrieres (z=1; z=0; z=-1)
   !
   !
   z=1
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*               &
                 ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
                  +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
@@ -3882,11 +4080,13 @@ subroutine filtragez_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   z=0
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*               &
                 ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
                  +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
@@ -3894,28 +4094,51 @@ subroutine filtragez_sup
         end do
      end do
   end do
+!$OMP END do nowait
   !
   z=-1
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*               &
                 ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
                  +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
+!$OMP END do nowait
   !
   z=-2
-  do i=1,5
+!$OMP DO SCHEDULE(STATIC) collapse(3)
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
+  do i=1,5
            Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z+1))
         end do
      end do
   end do
   !
   !
+!$OMP BARRIER
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=-2,1
+     do y=yfmin_z,yfmax_z
+        do x=xfmin_z,xfmax_z
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do nowait
+!$OMP DO SCHEDULE(static) collapse(3)
+  do z=nz,nz+3
+     do y=yfmin_z,yfmax_z
+        do x=xfmin_z,xfmax_z
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP END do
 end subroutine filtragez_sup
 !******************************************************************
 !
@@ -3935,10 +4158,7 @@ subroutine fluxes
   integer :: x,y,z
   !
   !
-!$OMP PARALLEL DO DEFAULT(NONE) &
-!$OMP SHARED(E,F,G,H,uo,Un,gamma,po,rhoo,vo,wo,duox,duoy,duoz) &
-!$OMP SHARED(dvox,dvoy,dvoz,dwox,dwoy,dwoz,dpox,dpoy,dpoz,nx,ny,nz) &
-!$OMP PRIVATE(x,y,z)
+!$OMP DO SCHEDULE(static) collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
         do x=-2,nx+3
@@ -3979,7 +4199,7 @@ subroutine fluxes
 enddo
 enddo
 enddo
-!$OMP END PARALLEL DO
+!$OMP END DO nowait
 end subroutine fluxes
 !******************************************************************
 !
@@ -3999,12 +4219,13 @@ subroutine ts(irk)
   use mod_vectors
   use mod_scales
   implicit none
-  integer :: irk
+  integer,intent(in) :: irk
   integer :: x,y,z
   !
   !
   !!///// Monopole avec ou sans ecoulement
   if (icas==120) then
+!$OMP DO SCHEDULE(dynamic,1)  collapse(2)
      do z=-2,nz+3
         do y=-2,ny+3
            do x=-2,nx+3   
@@ -4014,6 +4235,7 @@ subroutine ts(irk)
            end do
         end do
      end do
+!$OMP END DO nowait
   end if
   !
   !
@@ -4246,6 +4468,16 @@ subroutine record(itime)
   !
   !
   !!///// SAUVEGARDE DE L'ECOULEMENT MOYEN AU DEBUT DU CALCUL
+
+  if (mod(itime,record_step).eq.0) then
+     call dm_num2char_6(char_de_irecord,irecord)
+     if(o_record_vort) then
+        call calculvort
+     endif
+  endif
+
+!$OMP SECTIONS
+!$OMP SECTION
   if (itime.eq.0) then
      fichier_a_ecrire=trim(record_filename_ecoulmoy)//extension
      write(6,*) 'Enregistrement champ moyen:',  '     t/T = ',time/(2.*pi/omega)
@@ -4278,44 +4510,44 @@ subroutine record(itime)
   !
   !
   !!///// SAUVEGARDE DES CHAMPS DE PRESSION TOUS LES record_step ITERATIONS
-
+!$OMP SECTION
   if (mod(itime,record_step).eq.0) then
-     call dm_num2char_6(char_de_irecord,irecord)
      fichier_a_ecrire=trim(record_filename_champs)//sep//char_de_irecord//extension
      write(6,*) 'Enregistrement champs complets:',irecord,'/',1+int((ntfin-nt0)/record_step),  '     t/T = ',time/(2.*pi/omega)
-     open(501,file=fichier_a_ecrire,form='unformatted',status='unknown')
-     write(501) record_dummy
-     write(501) itime
-     write(501) record_dummy
-     write(501) (((Un(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     write(501) record_dummy
-     write(501) (((Un(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     write(501) record_dummy
-     write(501) (((Un(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     write(501) record_dummy
-     write(501) (((Un(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     write(501) record_dummy
-     write(501) (((Un(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     write(501) record_dummy       
-     close(501)
+     open(502,file=fichier_a_ecrire,form='unformatted',status='unknown')
+     write(502) record_dummy
+     write(502) itime
+     write(502) record_dummy
+     write(502) (((Un(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(502) record_dummy
+     write(502) (((Un(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(502) record_dummy
+     write(502) (((Un(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(502) record_dummy
+     write(502) (((Un(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(502) record_dummy
+     write(502) (((Un(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(502) record_dummy       
+     close(502)
+  endif
      !
      !!// Enregistrement vorticite
+!$OMP SECTION
+  if (mod(itime,record_step).eq.0) then
      if(o_record_vort) then
-        call calculvort
-        call dm_num2char_6(char_de_irecord,irecord)
         fichier_a_ecrire=trim(record_filename_vort)//sep//char_de_irecord//extension
         write(6,*) '   + Enregistrement vorticite'
-        open(501,file=fichier_a_ecrire,form='unformatted',status='unknown')
-        write(501) record_dummy
-        write(501) itime
-        write(501) record_dummy
-        write(501) ((((VORT(i,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3),i=1,3)
-        write(501) record_dummy
-        close(501)
+        open(503,file=fichier_a_ecrire,form='unformatted',status='unknown')
+        write(503) record_dummy
+        write(503) itime
+        write(503) record_dummy
+        write(503) ((((VORT(i,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3),i=1,3)
+        write(503) record_dummy
+        close(503)
      end if
      !
-     irecord=irecord+1
   end if
+
   !
   !
   !!///// SAUVEGARDE DU RESIDU
@@ -4338,35 +4570,38 @@ subroutine record(itime)
   !!///// SAUVEGARDE A TOUS LES PAS DE TEMPS
   !
   !
+!$OMP SECTION
   if (o_rect) then
-     do z=1,nzrect
-        do y=1,nyrect
-           do x=1,nxrect
-              rect(itime,x,y,z,:)= U(:,xrect(x),yrect(y),zrect(z))
-           end do
-        end do
-     end do
      if(itime.eq.ntfin) then
+       do z=1,nzrect
+          do y=1,nyrect
+             do x=1,nxrect
+                rect(itime,x,y,z,:)= U(:,xrect(x),yrect(y),zrect(z))
+             end do
+          end do
+       end do
         call dm_num2char_2(char_de_irun,irun)
         fichier_a_ecrire=trim("bin_rect")//sep//trim("run")//char_de_irun//extension
         write(6,*) 'Enregistrement du fichier rect a tous les pas de temps.' 
-        open(501,file=fichier_a_ecrire,form='unformatted',status='unknown')
-        write(501) record_dummy
-        write(501) nxrect
-        write(501) nyrect
-        write(501) nzrect
-        write(501) record_dummy
-        write(501) xrect
-        write(501) yrect
-        write(501) zrect
-        write(501) record_dummy
-        write(501) (((((rect(i,x,y,z,j),i=nt0,ntfin),x=1,nxrect),y=1,nyrect),z=1,nzrect),j=1,5)
-        write(501) record_dummy
-        close(501)
+        open(505,file=fichier_a_ecrire,form='unformatted',status='unknown')
+        write(505) record_dummy
+        write(505) nxrect
+        write(505) nyrect
+        write(505) nzrect
+        write(505) record_dummy
+        write(505) xrect
+        write(505) yrect
+        write(505) zrect
+        write(505) record_dummy
+        write(505) (((((rect(i,x,y,z,j),i=nt0,ntfin),x=1,nxrect),y=1,nyrect),z=1,nzrect),j=1,5)
+        write(505) record_dummy
+        close(505)
      endif
   end if
   !
   !
+!$OMP END SECTIONS nowait
+  if (mod(itime,record_step).eq.0) irecord=irecord+1
 end subroutine record
 !******************************************************************
 !
@@ -4400,21 +4635,21 @@ subroutine record_for_restart
   call dm_num2char_2(char_de_irun,irun)
   fichier_a_ecrire=trim("bin_restart")//sep//trim("run")//char_de_irun//extension
   write(6,*) 'Enregistrement du fichier restart (fin du run ', char_de_irun,').' 
-  open(501,file=fichier_a_ecrire,form='unformatted',status='unknown')
-  write(501) record_dummy
-  write(501) nt0 
-  write(501) ntfin
-  write(501) irun
-  write(501) irecord
-  write(501) time
-  write(501) record_dummy
-  write(501) (((Un(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) record_dummy
-  close(501)
+  open(506,file=fichier_a_ecrire,form='unformatted',status='unknown')
+  write(506) record_dummy
+  write(506) nt0 
+  write(506) ntfin
+  write(506) irun
+  write(506) irecord
+  write(506) time
+  write(506) record_dummy
+  write(506) (((Un(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(506) (((Un(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(506) (((Un(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(506) (((Un(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(506) (((Un(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(506) record_dummy
+  close(506)
   !
 end subroutine record_for_restart
 !******************************************************************
@@ -4438,52 +4673,52 @@ subroutine sauveparametre
   implicit none
   integer :: int_option
   !
-  open(501,file='bin_parametre.bin',form='unformatted',status='unknown')
-  write(501) record_dummy
-  write(501) deltax
-  write(501) deltay
-  write(501) deltaz
-  write(501) deltat
-  write(501) record_dummy
-  write(501) nx
-  write(501) ny
-  write(501) nz
-  write(501) nymin
-  write(501) nymax
-  write(501) nt0
-  write(501) ntfin
-  write(501) record_step
-  write(501) record_dummy
-  write(501) xg
-  write(501) yg
-  write(501) zg
-  write(501) record_dummy
-  write(501) mo
-  write(501) amp
-  write(501) omega 
-  write(501) alpha
-  write(501) record_dummy
+  open(500,file='bin_parametre.bin',form='unformatted',status='unknown')
+  write(500) record_dummy
+  write(500) deltax
+  write(500) deltay
+  write(500) deltaz
+  write(500) deltat
+  write(500) record_dummy
+  write(500) nx
+  write(500) ny
+  write(500) nz
+  write(500) nymin
+  write(500) nymax
+  write(500) nt0
+  write(500) ntfin
+  write(500) record_step
+  write(500) record_dummy
+  write(500) xg
+  write(500) yg
+  write(500) zg
+  write(500) record_dummy
+  write(500) mo
+  write(500) amp
+  write(500) omega 
+  write(500) alpha
+  write(500) record_dummy
   if(o_damping) then
      int_option=1
   else
      int_option=0
   end if
-  write(501) int_option
-  write(501) record_dummy
+  write(500) int_option
+  write(500) record_dummy
   if(o_damping_sup) then
      int_option=1
   else
      int_option=0
   end if
-  write(501) int_option
-  write(501) record_dummy
-  write(501) cfx
-  write(501) cfy
-  write(501) cfz
-  write(501) icas
-  write(501) irun
-  write(501) record_dummy
-  close(501)
+  write(500) int_option
+  write(500) record_dummy
+  write(500) cfx
+  write(500) cfy
+  write(500) cfz
+  write(500) icas
+  write(500) irun
+  write(500) record_dummy
+  close(500)
   !
   !
 end subroutine sauveparametre
@@ -4576,6 +4811,7 @@ subroutine calculvort
   !
   !
   VORT=0.
+!$OMP DO SCHEDULE(dynamic,1) collapse(2)
   do z=1,nz
      do y=1,ny
         do x=1,nx
@@ -4590,6 +4826,7 @@ subroutine calculvort
         end do
      end do
   end do
+!$OMP END DO
   !
   !
 end subroutine calculvort
