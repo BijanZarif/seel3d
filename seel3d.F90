@@ -221,9 +221,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=51!101
-     ny=51!101
-     nz=51!101
+     nx=26!101
+     ny=26!101
+     nz=26!101
      ntfin=200
      record_step=500
      mo=0.5
@@ -547,21 +547,21 @@ subroutine integ
   call sauveparametre
   !
 !$OMP PARALLEL 
+
+
+!/// NON NECESSAIRE
 #ifdef _OPENMP
 nt=OMP_get_num_threads()
 !$OMP single
 print*, "Nombre de Thread : ",nt
 !$OMP end single
 #endif
+!/// NON NECESSAIRE
 
-!$OMP DO SCHEDULE(static) collapse(1)
+
+!$OMP DO  
   do z=-2,nz+3
-     do y=-2,ny+3
-!$OMP SIMD 
-        do x=-2,nx+3
-        Un(:,x,y,z)=U(:,x,y,z)
-enddo
-enddo
+    Un(:,:,:,z)=U(:,:,:,z)
 enddo
 !$OMP end DO nowait
 !$OMP BARRIER
@@ -607,121 +607,28 @@ enddo
         call pts_c_bottomleftback(irk)
 !
 !$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  
   do z=-2,nz+3
-     do y=-2,ny+3
-!$OMP SIMD 
-        do x=-2,nx+3
-        Un(:,x,y,z)=Ut(:,x,y,z)
-enddo
-enddo
+    Un(:,:,:,z)=Ut(:,:,:,z)
 enddo
 !$OMP end DO nowait
 !$OMP BARRIER
      end do
 
      if (o_damping) then
-         call filtrage8x          !!rem: entree Ut --> sortie: Un
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static)  collapse(2)
-  do z=zfmin_x,zfmax_x
-     do y=yfmin_x,yfmax_x
-!$OMP SIMD
-        do x=xfmin_x,xfmax_x
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-         call filtrage8y          !!rem: entree Ut --> sortie: Un
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_y,zfmax_y
-     do y=yfmin_y,yfmax_y
-!$OMP SIMD 
-        do x=xfmin_y,xfmax_y
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-         call filtrage8z          !!rem: entree Ut --> sortie: Un 
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_z,zfmax_z
-     do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-        do x=xfmin_z,xfmax_z
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
+         call filtrage8x          !!rem: entree Ut --> sortie: Un=Ut
+         call filtrage8y          !!rem: entree Ut --> sortie: Un=Ut
+         call filtrage8z          !!rem: entree Ut --> sortie: Un=Ut
         !
         if(o_damping_sup) then
-           call filtragex_sup
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_x,zfmax_x
-     do y=yfmin_x,yfmax_x
-!$OMP SIMD 
-        do x=-2,1
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_x,zfmax_x
-     do y=yfmin_x,yfmax_x
-!$OMP SIMD 
-        do x=nx,nx+3
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-           call filtragey_sup
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_y,zfmax_y
-     do y=-2,1
-!$OMP SIMD 
-        do x=xfmin_y,xfmax_y
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static) collapse(2)
-  do z=zfmin_y,zfmax_y
-     do y=ny,ny+3
-!$OMP SIMD 
-        do x=xfmin_y,xfmax_y
-        Ut(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-           call filtragez_sup
+           call filtragex_sup !!rem: entree Ut --> sortie: Un=Ut
+           call filtragey_sup !!rem: entree Ut --> sortie: Un=Ut
+           call filtragez_sup !!rem: entree Ut --> sortie: Un
         end if
      end if
-!$OMP BARRIER
-!$OMP DO SCHEDULE(static)
+!$OMP DO 
   do z=-2,nz+3
-     do y=-2,ny+3
-!$OMP SIMD 
-        do x=-2,nx+3
-        U(:,x,y,z)=Un(:,x,y,z)
-enddo
-enddo
+    U(:,:,:,z)=Un(:,:,:,z)
 enddo
 !$OMP end DO nowait
 !$OMP BARRIER
@@ -1016,7 +923,7 @@ subroutine set_champ(itime)
   !!///// Pulse de pression
   if (itime.eq.0) then
      if (icas==100) then
-!$OMP DO SCHEDULE(static) 
+!$OMP DO  
         do z=1,nz
            do y=1,ny
 !$OMP SIMD private(arg)
@@ -1029,14 +936,9 @@ subroutine set_champ(itime)
         end do
 !$OMP end DO nowait
 !$OMP BARRIER 
-!$OMP DO SCHEDULE(static)
+!$OMP DO 
   do z=-2,nz+3
-     do y=-2,ny+3
-!$OMP SIMD 
-        do x=-2,nx+3
-        Un(:,x,y,z)=U(:,x,y,z)
-enddo
-enddo
+        Un(:,:,:,z)=U(:,:,:,z)
 enddo
 !$OMP end DO nowait
 !$OMP BARRIER
@@ -1063,10 +965,7 @@ subroutine ptsint(irk)
   real :: CC(5),DDx(5),DDy(5),DDz(5)
   integer :: irk,x,y,z
   !
-
-
-
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
      do z=1,nz
         do y=1,ny
 !$OMP SIMD private(ddx,ddy,ddz,cc)
@@ -1129,7 +1028,7 @@ dirz=0
 diry=0
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1236,7 +1135,7 @@ dirz=0
 diry=0
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1333,7 +1232,7 @@ dirz=0
 diry=1
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1430,7 +1329,7 @@ dirz=0
 diry=-1
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1528,7 +1427,7 @@ dirz=-1
 diry=0
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1626,7 +1525,7 @@ dirz=1
 diry=0
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1724,7 +1623,7 @@ dirz=0
 diry=-1
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1822,7 +1721,7 @@ dirz=-1
 diry=-1
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -1920,7 +1819,7 @@ dirz=-1
 diry=0
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2018,7 +1917,7 @@ dirz=0
 diry=1
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2117,7 +2016,7 @@ dirz=0
 diry=-1
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2215,7 +2114,7 @@ dirz=0
 diry=1
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=1,nz
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2314,7 +2213,7 @@ dirz=-1
 diry=1
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2413,7 +2312,7 @@ dirz=-1
 diry=0
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2511,7 +2410,7 @@ dirz=1
 diry=0
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2609,7 +2508,7 @@ dirz=1
 diry=0
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=1,ny
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2707,7 +2606,7 @@ dirz=1
 diry=-1
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2805,7 +2704,7 @@ dirz=1
 diry=1
 dirx=0
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -2903,7 +2802,7 @@ dirz=-1
 diry=-1
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3001,7 +2900,7 @@ dirz=-1
 diry=-1
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3099,7 +2998,7 @@ dirz=-1
 diry=1
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3197,7 +3096,7 @@ dirz=-1
 diry=1
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=-2,0
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3295,7 +3194,7 @@ dirz=1
 diry=-1
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3393,7 +3292,7 @@ dirz=1
 diry=-1
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=-2,0
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd)
@@ -3491,7 +3390,7 @@ dirz=1
 diry=1
 dirx=1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3589,7 +3488,7 @@ dirz=1
 diry=1
 dirx=-1
 
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
 !$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
@@ -3670,10 +3569,9 @@ subroutine filtrage8x
 !///// FILTRAGE EN X DES POINTS INTERIEURS
 !
 !
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(3)
       do z=zfmin_x,zfmax_x
          do y=yfmin_x,yfmax_x
-!$OMP SIMD 
             do x=xfmin_x,xfmax_x
                Un(:,x,y,z) = Ut(:,x,y,z) - cfx*                   &
                            ( dfilt8(4)*(Ut(:,x+4,y,z)+Ut(:,x-4,y,z))  &
@@ -3685,6 +3583,18 @@ subroutine filtrage8x
       end do
    end do
 !$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO   collapse(2)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+!$OMP SIMD
+        do x=xfmin_x,xfmax_x
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
 !
 !
 end subroutine filtrage8x
@@ -3710,10 +3620,9 @@ subroutine filtrage8y
 !///// FILTRAGE EN Y DES POINTS INTERIEURS
 !
 !
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(3)
       do z=zfmin_y,zfmax_y
          do y=yfmin_y,yfmax_y
-!$OMP SIMD 
             do x=xfmin_y,xfmax_y
                Un(:,x,y,z) = Ut(:,x,y,z) - cfy*                  &
                           ( dfilt8(4)*(Ut(:,x,y+4,z)+Ut(:,x,y-4,z))  &
@@ -3725,6 +3634,18 @@ subroutine filtrage8y
       end do
    end do
 !$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO  collapse(2)
+  do z=zfmin_y,zfmax_y
+     do y=yfmin_y,yfmax_y
+!$OMP SIMD 
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
 !
 !
 end subroutine filtrage8y
@@ -3750,10 +3671,9 @@ subroutine filtrage8z
 !///// FILTRAGE EN Z DES POINTS INTERIEURS
 !
 !
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(3)
       do z=zfmin_z,zfmax_z
          do y=yfmin_z,yfmax_z
-!$OMP SIMD 
             do x=xfmin_z,xfmax_z
                Un(:,x,y,z) = Ut(:,x,y,z) - cfz*                  &
                           ( dfilt8(4)*(Ut(:,x,y,z+4)+Ut(:,x,y,z-4))  &
@@ -3765,6 +3685,18 @@ subroutine filtrage8z
       end do
    end do
 !$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO  collapse(2)
+  do z=zfmin_z,zfmax_z
+     do y=yfmin_z,yfmax_z
+!$OMP SIMD 
+        do x=xfmin_z,xfmax_z
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
 !
 !
 end subroutine filtrage8z
@@ -3791,7 +3723,7 @@ subroutine filtragex_sup
 !
 !
    x=nx
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3805,7 +3737,7 @@ subroutine filtragex_sup
 !$OMP end DO nowait
 !
    x=nx+1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3818,7 +3750,7 @@ subroutine filtragex_sup
 !$OMP end DO nowait
 !
    x=nx+2
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3830,7 +3762,7 @@ subroutine filtragex_sup
 !$OMP end DO nowait
 !
    x=nx+3
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3844,7 +3776,7 @@ subroutine filtragex_sup
 !
 !
    x=1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3858,7 +3790,7 @@ subroutine filtragex_sup
 !$OMP end DO nowait
 !
    x=0
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3871,7 +3803,7 @@ subroutine filtragex_sup
 !$OMP end DO nowait
 !
    x=-1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3884,7 +3816,7 @@ subroutine filtragex_sup
 !
 !
    x=-2
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
@@ -3892,6 +3824,29 @@ subroutine filtragex_sup
       end do
    end do
 !$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO  collapse(2)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+!$OMP SIMD 
+        do x=-2,1
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO  collapse(2)
+  do z=zfmin_x,zfmax_x
+     do y=yfmin_x,yfmax_x
+!$OMP SIMD 
+        do x=nx,nx+3
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
 !
 !
 end subroutine filtragex_sup
@@ -3918,7 +3873,7 @@ subroutine filtragey_sup
 !
 !
    y=ny
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -3932,7 +3887,7 @@ subroutine filtragey_sup
 !$OMP end DO nowait
 !
    y=ny+1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -3945,7 +3900,7 @@ subroutine filtragey_sup
 !$OMP end DO nowait
 !
    y=ny+2
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -3957,7 +3912,7 @@ subroutine filtragey_sup
 !$OMP end DO nowait
 !
    y=ny+3
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -3971,7 +3926,7 @@ subroutine filtragey_sup
 !
 !
    y=1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -3985,7 +3940,7 @@ subroutine filtragey_sup
 !$OMP end DO nowait
 !
    y=0
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -3998,7 +3953,7 @@ subroutine filtragey_sup
 !$OMP end DO nowait
 !
    y=-1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -4010,7 +3965,7 @@ subroutine filtragey_sup
 !$OMP end DO nowait
 !
    y=-2
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
@@ -4018,6 +3973,29 @@ subroutine filtragey_sup
       end do
    end do
 !$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO  collapse(2)
+  do z=zfmin_y,zfmax_y
+     do y=-2,1
+!$OMP SIMD 
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
+!$OMP DO  collapse(2)
+  do z=zfmin_y,zfmax_y
+     do y=ny,ny+3
+!$OMP SIMD 
+        do x=xfmin_y,xfmax_y
+        Ut(:,x,y,z)=Un(:,x,y,z)
+enddo
+enddo
+enddo
+!$OMP end DO nowait
+!$OMP BARRIER
 !
 !
 end subroutine filtragey_sup
@@ -4044,7 +4022,7 @@ subroutine filtragez_sup
 !
 !
    z=nz
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4058,7 +4036,7 @@ subroutine filtragez_sup
 !$OMP end DO nowait
 !
    z=nz+1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4071,7 +4049,7 @@ subroutine filtragez_sup
 !$OMP end DO nowait
 !
    z=nz+2
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4083,7 +4061,7 @@ subroutine filtragez_sup
 !$OMP end DO nowait
 !
    z=nz+3
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4096,7 +4074,7 @@ subroutine filtragez_sup
 !
 !
    z=1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4110,7 +4088,7 @@ subroutine filtragez_sup
 !$OMP end DO nowait
 !
    z=0
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4123,7 +4101,7 @@ subroutine filtragez_sup
 !$OMP end DO nowait
 !
    z=-1
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4135,7 +4113,7 @@ subroutine filtragez_sup
 !$OMP end DO nowait
 !
    z=-2
-!$OMP DO SCHEDULE(static) !collapse(2)
+!$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
@@ -4143,6 +4121,7 @@ subroutine filtragez_sup
       end do
    end do
 !$OMP end DO nowait
+!$OMP BARRIER
 !
 !
 end subroutine filtragez_sup
@@ -4164,10 +4143,10 @@ subroutine fluxes
   integer :: x,y,z
   !
   !
-!$OMP DO SCHEDULE(static) collapse(2)
+!$OMP DO  collapse(3)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=-2,nx+3
   E(1,x,y,z) = uo(x,y,z)*Un(1,x,y,z)+Un(2,x,y,z)
   E(2,x,y,z) = uo(x,y,z)*Un(2,x,y,z)+Un(5,x,y,z)
@@ -4233,7 +4212,7 @@ subroutine ts(irk)
   !
   !!///// Monopole avec ou sans ecoulement
   if (icas==120) then
-!$OMP DO SCHEDULE(static)
+!$OMP DO  collapse(2)
      do z=-2,nz+3
         do y=-2,ny+3
 !$OMP SIMD 
@@ -4820,9 +4799,10 @@ subroutine calculvort
   !
   !
   VORT=0.
-!$OMP DO SCHEDULE(static) 
+!$OMP DO  collapse(2)
   do z=1,nz
      do y=1,ny
+!$OMP SIMD 
         do x=1,nx
            do j=-3,3
               VORT(1,x,y,z) = VORT(1,x,y,z) + dyg(y)*a(j)*U(4,x,y+j,z)          &
