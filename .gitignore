@@ -1,1 +1,6 @@
 Tmp/*
+*.mod
+*.bin
+gmon.out
+seel3d
+

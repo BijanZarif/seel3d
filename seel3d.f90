@@ -306,7 +306,7 @@ subroutine affichage
    integer :: i,x
 !
    27 format(A39,I4)
-   28 format(A39,G10.4)
+   28 format(A39,G11.4)
 !
 !
 !! ///// INFOS SUR LES PARMETRES GENERAUX
@@ -551,6 +551,7 @@ subroutine integ
          call ts(irk)
          call fluxes
          call ptsint(irk)
+
          !// FACES
      call ptsright(irk,ibc_right)
      call ptsleft(irk)
@@ -603,7 +604,7 @@ subroutine integ
 
       U=Un
       time=time+deltat
-            
+      print*,U(5,5,5,:)
    end do
 !
 !
@@ -1062,7 +1063,6 @@ subroutine ptsleft(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_onde
    use mod_vectors
    implicit none
    integer :: irk,j,x,y,z,i
@@ -1520,7 +1520,6 @@ subroutine ptsbottomleft(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -1616,7 +1615,6 @@ subroutine ptsbottomback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -1712,7 +1710,6 @@ subroutine ptsleftback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -1808,7 +1805,6 @@ subroutine ptstopright(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -1905,7 +1901,6 @@ subroutine ptsbottomright(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2001,7 +1996,6 @@ subroutine ptstopleft(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2098,7 +2092,6 @@ subroutine ptstopback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2195,7 +2188,6 @@ subroutine ptsrightback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2291,7 +2283,6 @@ subroutine ptsrightfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2387,7 +2378,6 @@ subroutine ptsleftfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2483,7 +2473,6 @@ subroutine ptsbottomfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2579,7 +2568,6 @@ subroutine ptstopfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2675,7 +2663,6 @@ subroutine pts_c_bottomleftback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2775,7 +2762,6 @@ subroutine pts_c_bottomrightback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2875,7 +2861,6 @@ subroutine pts_c_toprightback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -2975,7 +2960,6 @@ subroutine pts_c_topleftback(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -3075,7 +3059,6 @@ subroutine pts_c_bottomleftfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -3175,7 +3158,6 @@ subroutine pts_c_bottomrightfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -3275,7 +3257,6 @@ subroutine pts_c_toprightfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -3375,7 +3356,6 @@ subroutine pts_c_topleftfront(irk)
 !******************************************************************
 !******************************************************************
    use mod_scheme
-   use mod_condlim
    use mod_vectors
    implicit none
    integer :: irk,i,j,x,y,z
@@ -3950,6 +3930,7 @@ subroutine fluxes
    implicit none
 !
 !
+
    E(:,:,:,1) = Un(:,:,:,2)+Un(:,:,:,1)*uo(:,:,:)
    E(:,:,:,2) = uo(:,:,:)*Un(:,:,:,2)+Un(:,:,:,5)
    E(:,:,:,3) = uo(:,:,:)*Un(:,:,:,3)
@@ -3961,6 +3942,7 @@ subroutine fluxes
    F(:,:,:,3) = vo(:,:,:)*Un(:,:,:,3)+Un(:,:,:,5)
    F(:,:,:,4) = vo(:,:,:)*Un(:,:,:,4)
    F(:,:,:,5) = vo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)/rhoo(:,:,:)*Un(:,:,:,3)
+
 !
    G(:,:,:,1) = Un(:,:,:,4)+Un(:,:,:,1)*wo(:,:,:)
    G(:,:,:,2) = wo(:,:,:)*Un(:,:,:,2)
@@ -3978,10 +3960,11 @@ subroutine fluxes
    H(:,:,:,4) = dwox(:,:,:) * (Un(:,:,:,2)+uo(:,:,:)*Un(:,:,:,1))      &
             + dwoy(:,:,:) * (Un(:,:,:,3)+vo(:,:,:)*Un(:,:,:,1))        &
             + dwoz(:,:,:) * (Un(:,:,:,4)+wo(:,:,:)*Un(:,:,:,1))
+
    H(:,:,:,5) = (gamma-1.) * ( (duox(:,:,:)+dvoy(:,:,:)+dwoz(:,:,:))*Un(:,:,:,5)   &
-            - dpox(:,:,:)/rhoo(:,:,:)*Un(:,:,:,2)                    &
-            - dpoy(:,:,:)/rhoo(:,:,:)*Un(:,:,:,3)                    &
-            - dpoz(:,:,:)/rhoo(:,:,:)*Un(:,:,:,4) )
+              - dpox(:,:,:)/rhoo(:,:,:)*Un(:,:,:,2)                    &
+              - dpoy(:,:,:)/rhoo(:,:,:)*Un(:,:,:,3)                    &
+              - dpoz(:,:,:)/rhoo(:,:,:)*Un(:,:,:,4) )
 !
 !
 end subroutine fluxes
