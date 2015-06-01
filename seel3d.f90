@@ -607,7 +607,7 @@ subroutine integ
      U=Un
      time=time+deltat
   end do
-  print*,U(5,5,5,:)
+  print*,U(:,5,5,5)
   !
   !
 end subroutine integ
@@ -669,17 +669,17 @@ subroutine inivar
   allocate(dpoy(-2:nx+3,-2:ny+3,-2:nz+3))
   allocate(dpoz(-2:nx+3,-2:ny+3,-2:nz+3))
   !
-  allocate(U(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(Un(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(Ut(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(E(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(F(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(G(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(H(-2:nx+3,-2:ny+3,-2:nz+3,5))
-  allocate(S(-2:nx+3,-2:ny+3,-2:nz+3,5))
+  allocate( U(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate(Un(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate(Ut(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate( E(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate( F(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate( G(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate( H(5,-2:nx+3,-2:ny+3,-2:nz+3))
+  allocate( S(5,-2:nx+3,-2:ny+3,-2:nz+3))
   ! 
   if(o_record_vort) then
-     allocate(VORT(-2:nx+3,-2:ny+3,-2:nz+3,3))
+     allocate(VORT(3,-2:nx+3,-2:ny+3,-2:nz+3))
      VORT=0.
   end if
   !
@@ -728,11 +728,11 @@ subroutine inivar
      read(501) time_save
      read(501) read_dummy
      write(6,*) '   check: read_dummy=', read_dummy
-     read(501) (((U(x,y,z,1),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(x,y,z,2),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(x,y,z,3),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(x,y,z,4),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(501) (((U(x,y,z,5),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(501) (((U(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(501) (((U(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(501) (((U(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(501) (((U(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(501) (((U(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      read(501) read_dummy
      write(6,*) '   check: read_dummy=', read_dummy
      close(501)
@@ -898,8 +898,8 @@ subroutine set_champ(itime)
            do y=1,ny
               do x=1,nx
                  arg = (xg(x)+0.)**2 + yg(y)**2 + zg(z)**2
-                 U(x,y,z,1) = amp * exp( - alpha*arg )
-                 U(x,y,z,5) = U(x,y,z,1)
+                 U(1,x,y,z) = amp * exp( - alpha*arg )
+                 U(5,x,y,z) = U(1,x,y,z)
               end do
            end do
         end do
@@ -924,31 +924,33 @@ subroutine ptsint(irk)
   use mod_scheme
   use mod_vectors
   implicit none
-  real :: CC,DDx,DDy,DDz
+  real :: CC(5),DDx(5),DDy(5),DDz(5)
   integer :: irk,i,x,y,z
   ! 
-  do i=1,5
+!$OMP PARALLEL DO DEFAULT(NONE) &
+!$OMP PRIVATE(DDx,DDy,DDz,CC,x,y,z) &
+!$OMP SHARED(nz,ny,nx,a,E,F,G,dxg,dyg,dzg,H,S,deltat,rk,U,Ut,irk)
      do z=1,nz
         do y=1,ny
            do x=1,nx
-              DDx = a(3)*(E(x+3,y,z,i) - E(x-3,y,z,i))    &
-                   +a(2)*(E(x+2,y,z,i) - E(x-2,y,z,i))    &
-                   +a(1)*(E(x+1,y,z,i) - E(x-1,y,z,i))
+              DDx = a(3)*(E(:,x+3,y,z) - E(:,x-3,y,z))    &
+                   +a(2)*(E(:,x+2,y,z) - E(:,x-2,y,z))    &
+                   +a(1)*(E(:,x+1,y,z) - E(:,x-1,y,z))
               ! 
-              DDy = a(3)*(F(x,y+3,z,i) - F(x,y-3,z,i))    &
-                   +a(2)*(F(x,y+2,z,i) - F(x,y-2,z,i))    &
-                   +a(1)*(F(x,y+1,z,i) - F(x,y-1,z,i))
+              DDy = a(3)*(F(:,x,y+3,z) - F(:,x,y-3,z))    &
+                   +a(2)*(F(:,x,y+2,z) - F(:,x,y-2,z))    &
+                   +a(1)*(F(:,x,y+1,z) - F(:,x,y-1,z))
               ! 
-              DDz = a(3)*(G(x,y,z+3,i) - G(x,y,z-3,i))    &
-                   +a(2)*(G(x,y,z+2,i) - G(x,y,z-2,i))    &
-                   +a(1)*(G(x,y,z+1,i) - G(x,y,z-1,i))
+              DDz = a(3)*(G(:,x,y,z+3) - G(:,x,y,z-3))    &
+                   +a(2)*(G(:,x,y,z+2) - G(:,x,y,z-2))    &
+                   +a(1)*(G(:,x,y,z+1) - G(:,x,y,z-1))
               !
-              CC = - dxg(x)*DDx - dyg(y)*DDy - dzg(z)*DDz - H(x,y,z,i) + S(x,y,z,i)
-              Ut(x,y,z,i) = U(x,y,z,i) + deltat*CC*rk(irk)
+              CC = - dxg(x)*DDx - dyg(y)*DDy - dzg(z)*DDz - H(:,x,y,z) + S(:,x,y,z)
+              Ut(:,x,y,z) = U(:,x,y,z) + deltat*CC*rk(irk)
            end do
         end do
      end do
-  end do
+!$OMP END PARALLEL DO
   !
 end subroutine ptsint
 !******************************************************************
@@ -977,33 +979,33 @@ subroutine ptsright(irk,ibc)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,1:ny,1:nz,:) = Dx(nx+1,1:ny,1:nz,:) - a24(3-j)*Un(nx+1+j,1:ny,1:nz,:)
+     Dx(:,nx+1,1:ny,1:nz) = Dx(:,nx+1,1:ny,1:nz) - a24(3-j)*Un(:,nx+1+j,1:ny,1:nz)
   end do
   do j=-5,1
-     Dx(nx+2,1:ny,1:nz,:) = Dx(nx+2,1:ny,1:nz,:) - a15(2-j)*Un(nx+2+j,1:ny,1:nz,:)
+     Dx(:,nx+2,1:ny,1:nz) = Dx(:,nx+2,1:ny,1:nz) - a15(2-j)*Un(:,nx+2+j,1:ny,1:nz)
   end do
   do j=-6,0
-     Dx(nx+3,1:ny,1:nz,:) = Dx(nx+3,1:ny,1:nz,:) - a06(1-j)*Un(nx+3+j,1:ny,1:nz,:)
+     Dx(:,nx+3,1:ny,1:nz) = Dx(:,nx+3,1:ny,1:nz) - a06(1-j)*Un(:,nx+3+j,1:ny,1:nz)
   end do
   !
   do y=1,ny
-     Dy(nx+1:nx+3,y,1:nz,:) = a(3)*(Un(nx+1:nx+3,y+3,1:nz,:) - Un(nx+1:nx+3,y-3,1:nz,:)) &
-          +a(2)*(Un(nx+1:nx+3,y+2,1:nz,:) - Un(nx+1:nx+3,y-2,1:nz,:)) &
-          +a(1)*(Un(nx+1:nx+3,y+1,1:nz,:) - Un(nx+1:nx+3,y-1,1:nz,:))
+     Dy(:,nx+1:nx+3,y,1:nz) = a(3)*(Un(:,nx+1:nx+3,y+3,1:nz) - Un(:,nx+1:nx+3,y-3,1:nz)) &
+          +a(2)*(Un(:,nx+1:nx+3,y+2,1:nz) - Un(:,nx+1:nx+3,y-2,1:nz)) &
+          +a(1)*(Un(:,nx+1:nx+3,y+1,1:nz) - Un(:,nx+1:nx+3,y-1,1:nz))
   end do
   !
   do z=1,nz
-     Dz(nx+1:nx+3,1:ny,z,:) = a(3)*(Un(nx+1:nx+3,1:ny,z+3,:) - Un(nx+1:nx+3,1:ny,z-3,:)) &
-          +a(2)*(Un(nx+1:nx+3,1:ny,z+2,:) - Un(nx+1:nx+3,1:ny,z-2,:)) &
-          +a(1)*(Un(nx+1:nx+3,1:ny,z+1,:) - Un(nx+1:nx+3,1:ny,z-1,:))
+     Dz(:,nx+1:nx+3,1:ny,z) = a(3)*(Un(:,nx+1:nx+3,1:ny,z+3) - Un(:,nx+1:nx+3,1:ny,z-3)) &
+          +a(2)*(Un(:,nx+1:nx+3,1:ny,z+2) - Un(:,nx+1:nx+3,1:ny,z-2)) &
+          +a(1)*(Un(:,nx+1:nx+3,1:ny,z+1) - Un(:,nx+1:nx+3,1:ny,z-1))
   end do
   !
   do z=1,nz
      do y=1,ny
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1032,19 +1034,19 @@ subroutine ptsright(irk,ibc)
            !
            if(ibc==1) then
               do i=1,5
-                 DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+                 DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
               end do
            elseif(ibc==2) then
-              DD(5) = vray * (xc*Dx(x,y,z,5) + yc*Dy(x,y,z,5)  + zc*Dz(x,y,z,5)  + Un(x,y,z,5)/r)
-              DD(2) = uo(x,y,z) * Dx(x,y,z,2) + vo(x,y,z)*Dy(x,y,z,2) + wo(x,y,z)*Dz(x,y,z,2) + Dx(x,y,z,5)*rhoo(x,y,z)
-              DD(3) = uo(x,y,z) * Dx(x,y,z,3) + vo(x,y,z)*Dy(x,y,z,3) + wo(x,y,z)*Dz(x,y,z,3) + Dy(x,y,z,5)*rhoo(x,y,z)
-              DD(4) = uo(x,y,z) * Dx(x,y,z,4) + vo(x,y,z)*Dy(x,y,z,4) + wo(x,y,z)*Dz(x,y,z,4) + Dz(x,y,z,5)*rhoo(x,y,z)
-              DD(1) = uo(x,y,z) * Dx(x,y,z,1) + vo(x,y,z)*Dy(x,y,z,1) + wo(x,y,z)*Dz(x,y,z,1) &
-                   + ( DD(5) - uo(x,y,z) * Dx(x,y,z,5) - vo(x,y,z)*Dy(x,y,z,5) - wo(x,y,z)*Dz(x,y,z,5) ) / coo(x,y,z)**2
+              DD(5) = vray * (xc*Dx(5,x,y,z) + yc*Dy(5,x,y,z)  + zc*Dz(5,x,y,z)  + Un(5,x,y,z)/r)
+              DD(2) = uo(x,y,z) * Dx(2,x,y,z) + vo(x,y,z)*Dy(2,x,y,z) + wo(x,y,z)*Dz(2,x,y,z) + Dx(5,x,y,z)*rhoo(x,y,z)
+              DD(3) = uo(x,y,z) * Dx(3,x,y,z) + vo(x,y,z)*Dy(3,x,y,z) + wo(x,y,z)*Dz(3,x,y,z) + Dy(5,x,y,z)*rhoo(x,y,z)
+              DD(4) = uo(x,y,z) * Dx(4,x,y,z) + vo(x,y,z)*Dy(4,x,y,z) + wo(x,y,z)*Dz(4,x,y,z) + Dz(5,x,y,z)*rhoo(x,y,z)
+              DD(1) = uo(x,y,z) * Dx(1,x,y,z) + vo(x,y,z)*Dy(1,x,y,z) + wo(x,y,z)*Dz(1,x,y,z) &
+                   + ( DD(5) - uo(x,y,z) * Dx(5,x,y,z) - vo(x,y,z)*Dy(5,x,y,z) - wo(x,y,z)*Dz(5,x,y,z) ) / coo(x,y,z)**2
            end if
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1077,33 +1079,33 @@ subroutine ptsleft(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,1:ny,1:nz,:)  = Dx(0,1:ny,1:nz,:)  + a24(3+j)*Un(0+j,1:ny,1:nz,:)
+     Dx(:,0,1:ny,1:nz)  = Dx(:,0,1:ny,1:nz)  + a24(3+j)*Un(:,0+j,1:ny,1:nz)
   end do
   do j=-1,5
-     Dx(-1,1:ny,1:nz,:) = Dx(-1,1:ny,1:nz,:) + a15(2+j)*Un(-1+j,1:ny,1:nz,:)
+     Dx(:,-1,1:ny,1:nz) = Dx(:,-1,1:ny,1:nz) + a15(2+j)*Un(:,-1+j,1:ny,1:nz)
   end do
   do j=0,6                                                     
-     Dx(-2,1:ny,1:nz,:) = Dx(-2,1:ny,1:nz,:) + a06(1+j)*Un(-2+j,1:ny,1:nz,:)
+     Dx(:,-2,1:ny,1:nz) = Dx(:,-2,1:ny,1:nz) + a06(1+j)*Un(:,-2+j,1:ny,1:nz)
   end do
   !
   do y=1,ny
-     Dy(-2:0,y,1:nz,:) = a(3) * (Un(-2:0,y+3,1:nz,:) - Un(-2:0,y-3,1:nz,:))   &
-          +a(2) * (Un(-2:0,y+2,1:nz,:) - Un(-2:0,y-2,1:nz,:))   &
-          +a(1) * (Un(-2:0,y+1,1:nz,:) - Un(-2:0,y-1,1:nz,:))
+     Dy(:,-2:0,y,1:nz) = a(3) * (Un(:,-2:0,y+3,1:nz) - Un(:,-2:0,y-3,1:nz))   &
+          +a(2) * (Un(:,-2:0,y+2,1:nz) - Un(:,-2:0,y-2,1:nz))   &
+          +a(1) * (Un(:,-2:0,y+1,1:nz) - Un(:,-2:0,y-1,1:nz))
   end do
   !
   do z=1,nz
-     Dz(-2:0,1:ny,z,:) = a(3) * (Un(-2:0,1:ny,z+3,:) - Un(-2:0,1:ny,z-3,:))   &
-          +a(2) * (Un(-2:0,1:ny,z+2,:) - Un(-2:0,1:ny,z-2,:))   &
-          +a(1) * (Un(-2:0,1:ny,z+1,:) - Un(-2:0,1:ny,z-1,:))
+     Dz(:,-2:0,1:ny,z) = a(3) * (Un(:,-2:0,1:ny,z+3) - Un(:,-2:0,1:ny,z-3))   &
+          +a(2) * (Un(:,-2:0,1:ny,z+2) - Un(:,-2:0,1:ny,z-2))   &
+          +a(1) * (Un(:,-2:0,1:ny,z+1) - Un(:,-2:0,1:ny,z-1))
   end do
   !
   do z=1,nz
      do y=1,ny
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc=xg(x)- xg(nxray)
            yc=yg(y)- yg(nyray)
@@ -1131,11 +1133,11 @@ subroutine ptsleft(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1168,33 +1170,33 @@ subroutine ptstop(irk)
   Dz=0.
   !
   do j=-4,2
-     Dy(1:nx,ny+1,1:nz,:) = Dy(1:nx,ny+1,1:nz,:) - a24(3-j)*Un(1:nx,ny+1+j,1:nz,:)
+     Dy(:,1:nx,ny+1,1:nz) = Dy(:,1:nx,ny+1,1:nz) - a24(3-j)*Un(:,1:nx,ny+1+j,1:nz)
   end do
   do j=-5,1
-     Dy(1:nx,ny+2,1:nz,:) = Dy(1:nx,ny+2,1:nz,:) - a15(2-j)*Un(1:nx,ny+2+j,1:nz,:)
+     Dy(:,1:nx,ny+2,1:nz) = Dy(:,1:nx,ny+2,1:nz) - a15(2-j)*Un(:,1:nx,ny+2+j,1:nz)
   end do
   do j=-6,0
-     Dy(1:nx,ny+3,1:nz,:) = Dy(1:nx,ny+3,1:nz,:) - a06(1-j)*Un(1:nx,ny+3+j,1:nz,:)
+     Dy(:,1:nx,ny+3,1:nz) = Dy(:,1:nx,ny+3,1:nz) - a06(1-j)*Un(:,1:nx,ny+3+j,1:nz)
   end do
   !
   do x=1,nx
-     Dx(x,ny+1:ny+3,1:nz,:) = a(3)*(Un(x+3,ny+1:ny+3,1:nz,:)-Un(x-3,ny+1:ny+3,1:nz,:))  &
-          +a(2)*(Un(x+2,ny+1:ny+3,1:nz,:)-Un(x-2,ny+1:ny+3,1:nz,:))  &
-          +a(1)*(Un(x+1,ny+1:ny+3,1:nz,:)-Un(x-1,ny+1:ny+3,1:nz,:))
+     Dx(:,x,ny+1:ny+3,1:nz) = a(3)*(Un(:,x+3,ny+1:ny+3,1:nz)-Un(:,x-3,ny+1:ny+3,1:nz))  &
+          +a(2)*(Un(:,x+2,ny+1:ny+3,1:nz)-Un(:,x-2,ny+1:ny+3,1:nz))  &
+          +a(1)*(Un(:,x+1,ny+1:ny+3,1:nz)-Un(:,x-1,ny+1:ny+3,1:nz))
   end do
   !
   do z=1,nz
-     Dz(1:nx,ny+1:ny+3,z,:) = a(3)*(Un(1:nx,ny+1:ny+3,z+3,:)-Un(1:nx,ny+1:ny+3,z-3,:))  &
-          +a(2)*(Un(1:nx,ny+1:ny+3,z+2,:)-Un(1:nx,ny+1:ny+3,z-2,:))  &
-          +a(1)*(Un(1:nx,ny+1:ny+3,z+1,:)-Un(1:nx,ny+1:ny+3,z-1,:))
+     Dz(:,1:nx,ny+1:ny+3,z) = a(3)*(Un(:,1:nx,ny+1:ny+3,z+3)-Un(:,1:nx,ny+1:ny+3,z-3))  &
+          +a(2)*(Un(:,1:nx,ny+1:ny+3,z+2)-Un(:,1:nx,ny+1:ny+3,z-2))  &
+          +a(1)*(Un(:,1:nx,ny+1:ny+3,z+1)-Un(:,1:nx,ny+1:ny+3,z-1))
   end do
   !
   do z=1,nz
      do y=ny+1,ny+3
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1221,11 +1223,11 @@ subroutine ptstop(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1258,33 +1260,33 @@ subroutine ptsbot(irk)
   Dz=0.
   !
   do j=-2,4
-     Dy(1:nx,0,1:nz,:) =  Dy(1:nx,0,1:nz,:)  + a24(3+j)*Un(1:nx,0+j,1:nz,:)
+     Dy(:,1:nx,0,1:nz) =  Dy(:,1:nx,0,1:nz)  + a24(3+j)*Un(:,1:nx,0+j,1:nz)
   end do
   do j=-1,5
-     Dy(1:nx,-1,1:nz,:) = Dy(1:nx,-1,1:nz,:) + a15(2+j)*Un(1:nx,-1+j,1:nz,:)
+     Dy(:,1:nx,-1,1:nz) = Dy(:,1:nx,-1,1:nz) + a15(2+j)*Un(:,1:nx,-1+j,1:nz)
   end do
   do j=0,6
-     Dy(1:nx,-2,1:nz,:) = Dy(1:nx,-2,1:nz,:) + a06(1+j)*Un(1:nx,-2+j,1:nz,:)
+     Dy(:,1:nx,-2,1:nz) = Dy(:,1:nx,-2,1:nz) + a06(1+j)*Un(:,1:nx,-2+j,1:nz)
   end do
   !
   do x=1,nx
-     Dx(x,-2:0,1:nz,:) = a(3)*(Un(x+3,-2:0,1:nz,:)-Un(x-3,-2:0,1:nz,:))  &
-          +a(2)*(Un(x+2,-2:0,1:nz,:)-Un(x-2,-2:0,1:nz,:))  &
-          +a(1)*(Un(x+1,-2:0,1:nz,:)-Un(x-1,-2:0,1:nz,:))
+     Dx(:,x,-2:0,1:nz) = a(3)*(Un(:,x+3,-2:0,1:nz)-Un(:,x-3,-2:0,1:nz))  &
+          +a(2)*(Un(:,x+2,-2:0,1:nz)-Un(:,x-2,-2:0,1:nz))  &
+          +a(1)*(Un(:,x+1,-2:0,1:nz)-Un(:,x-1,-2:0,1:nz))
   end do
   !
   do z=1,nz
-     Dz(1:nx,-2:0,z,:) = a(3)*(Un(1:nx,-2:0,z+3,:)-Un(1:nx,-2:0,z-3,:))  &
-          +a(2)*(Un(1:nx,-2:0,z+2,:)-Un(1:nx,-2:0,z-2,:))  &
-          +a(1)*(Un(1:nx,-2:0,z+1,:)-Un(1:nx,-2:0,z-1,:))
+     Dz(:,1:nx,-2:0,z) = a(3)*(Un(:,1:nx,-2:0,z+3)-Un(:,1:nx,-2:0,z-3))  &
+          +a(2)*(Un(:,1:nx,-2:0,z+2)-Un(:,1:nx,-2:0,z-2))  &
+          +a(1)*(Un(:,1:nx,-2:0,z+1)-Un(:,1:nx,-2:0,z-1))
   end do
   !
   do z=1,nz
      do y=-2,0
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc=xg(x)- xg(nxray)
            yc=yg(y)- yg(nyray)
@@ -1312,11 +1314,11 @@ subroutine ptsbot(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1350,33 +1352,33 @@ subroutine ptsback(irk)
   Dz=0.
   !
   do j=-2,4
-     Dz(1:nx,1:ny,0,:) =  Dz(1:nx,1:ny,0,:)  + a24(3+j)*Un(1:nx,1:ny,0+j,:)
+     Dz(:,1:nx,1:ny,0) =  Dz(:,1:nx,1:ny,0)  + a24(3+j)*Un(:,1:nx,1:ny,0+j)
   end do
   do j=-1,5
-     Dz(1:nx,1:ny,-1,:) = Dz(1:nx,1:ny,-1,:) + a15(2+j)*Un(1:nx,1:ny,-1+j,:)
+     Dz(:,1:nx,1:ny,-1) = Dz(:,1:nx,1:ny,-1) + a15(2+j)*Un(:,1:nx,1:ny,-1+j)
   end do
   do j=0,6
-     Dz(1:nx,1:ny,-2,:) = Dz(1:nx,1:ny,-2,:) + a06(1+j)*Un(1:nx,1:ny,-2+j,:)
+     Dz(:,1:nx,1:ny,-2) = Dz(:,1:nx,1:ny,-2) + a06(1+j)*Un(:,1:nx,1:ny,-2+j)
   end do
   !
   do x=1,nx
-     Dx(x,1:ny,-2:0,:) = a(3)*(Un(x+3,1:ny,-2:0,:)-Un(x-3,1:ny,-2:0,:))  &
-          +a(2)*(Un(x+2,1:ny,-2:0,:)-Un(x-2,1:ny,-2:0,:))  &
-          +a(1)*(Un(x+1,1:ny,-2:0,:)-Un(x-1,1:ny,-2:0,:))
+     Dx(:,x,1:ny,-2:0) = a(3)*(Un(:,x+3,1:ny,-2:0)-Un(:,x-3,1:ny,-2:0))  &
+          +a(2)*(Un(:,x+2,1:ny,-2:0)-Un(:,x-2,1:ny,-2:0))  &
+          +a(1)*(Un(:,x+1,1:ny,-2:0)-Un(:,x-1,1:ny,-2:0))
   end do
   !
   do y=1,ny
-     Dy(1:nx,y,-2:0,:) = a(3)*(Un(1:nx,y+3,-2:0,:)-Un(1:nx,y-3,-2:0,:))  &
-          +a(2)*(Un(1:nx,y+2,-2:0,:)-Un(1:nx,y-2,-2:0,:))  &
-          +a(1)*(Un(1:nx,y+1,-2:0,:)-Un(1:nx,y-1,-2:0,:))
+     Dy(:,1:nx,y,-2:0) = a(3)*(Un(:,1:nx,y+3,-2:0)-Un(:,1:nx,y-3,-2:0))  &
+          +a(2)*(Un(:,1:nx,y+2,-2:0)-Un(:,1:nx,y-2,-2:0))  &
+          +a(1)*(Un(:,1:nx,y+1,-2:0)-Un(:,1:nx,y-1,-2:0))
   end do
   !
   do z=-2,0
      do x=1,nx
         do y=1,ny
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1404,11 +1406,11 @@ subroutine ptsback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1443,33 +1445,33 @@ subroutine ptsfront(irk)
   Dz=0.
   !
   do j=-4,2
-     Dz(1:nx,1:ny,nz+1,:) = Dz(1:nx,1:ny,nz+1,:) - a24(3-j)*Un(1:nx,1:ny,nz+1+j,:)
+     Dz(:,1:nx,1:ny,nz+1) = Dz(:,1:nx,1:ny,nz+1) - a24(3-j)*Un(:,1:nx,1:ny,nz+1+j)
   end do
   do j=-5,1
-     Dz(1:nx,1:ny,nz+2,:) = Dz(1:nx,1:ny,nz+2,:) - a15(2-j)*Un(1:nx,1:ny,nz+2+j,:)
+     Dz(:,1:nx,1:ny,nz+2) = Dz(:,1:nx,1:ny,nz+2) - a15(2-j)*Un(:,1:nx,1:ny,nz+2+j)
   end do
   do j=-6,0
-     Dz(1:nx,1:ny,nz+3,:) = Dz(1:nx,1:ny,nz+3,:) - a06(1-j)*Un(1:nx,1:ny,nz+3+j,:)
+     Dz(:,1:nx,1:ny,nz+3) = Dz(:,1:nx,1:ny,nz+3) - a06(1-j)*Un(:,1:nx,1:ny,nz+3+j)
   end do
   !
   do x=1,nx
-     Dx(x,1:ny,nz+1:nz+3,:) = a(3)*(Un(x+3,1:ny,nz+1:nz+3,:)-Un(x-3,1:ny,nz+1:nz+3,:))  &
-          +a(2)*(Un(x+2,1:ny,nz+1:nz+3,:)-Un(x-2,1:ny,nz+1:nz+3,:))  &
-          +a(1)*(Un(x+1,1:ny,nz+1:nz+3,:)-Un(x-1,1:ny,nz+1:nz+3,:))
+     Dx(:,x,1:ny,nz+1:nz+3) = a(3)*(Un(:,x+3,1:ny,nz+1:nz+3)-Un(:,x-3,1:ny,nz+1:nz+3))  &
+          +a(2)*(Un(:,x+2,1:ny,nz+1:nz+3)-Un(:,x-2,1:ny,nz+1:nz+3))  &
+          +a(1)*(Un(:,x+1,1:ny,nz+1:nz+3)-Un(:,x-1,1:ny,nz+1:nz+3))
   end do
   !   
   do y=1,ny
-     Dy(1:nx,y,nz+1:nz+3,:) = a(3)*(Un(1:nx,y+3,nz+1:nz+3,:)-Un(1:nx,y-3,nz+1:nz+3,:))  &
-          +a(2)*(Un(1:nx,y+2,nz+1:nz+3,:)-Un(1:nx,y-2,nz+1:nz+3,:))  &
-          +a(1)*(Un(1:nx,y+1,nz+1:nz+3,:)-Un(1:nx,y-1,nz+1:nz+3,:))
+     Dy(:,1:nx,y,nz+1:nz+3) = a(3)*(Un(:,1:nx,y+3,nz+1:nz+3)-Un(:,1:nx,y-3,nz+1:nz+3))  &
+          +a(2)*(Un(:,1:nx,y+2,nz+1:nz+3)-Un(:,1:nx,y-2,nz+1:nz+3))  &
+          +a(1)*(Un(:,1:nx,y+1,nz+1:nz+3)-Un(:,1:nx,y-1,nz+1:nz+3))
   end do
   !
   do z=nz+1,nz+3
      do y=1,ny
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1497,11 +1499,11 @@ subroutine ptsfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1534,37 +1536,37 @@ subroutine ptsbottomleft(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,-2:0,1:nz,:) = Dx(0,-2:0,1:nz,:) +  a24(3+j)*Un(0+j,-2:0,1:nz,:)
+     Dx(:,0,-2:0,1:nz) = Dx(:,0,-2:0,1:nz) +  a24(3+j)*Un(:,0+j,-2:0,1:nz)
   end do
   do j=-1,5
-     Dx(-1,-2:0,1:nz,:) = Dx(-1,-2:0,1:nz,:) + a15(2+j)*Un(-1+j,-2:0,1:nz,:)
+     Dx(:,-1,-2:0,1:nz) = Dx(:,-1,-2:0,1:nz) + a15(2+j)*Un(:,-1+j,-2:0,1:nz)
   end do
   do j=0,6
-     Dx(-2,-2:0,1:nz,:) = Dx(-2,-2:0,1:nz,:) + a06(1+j)*Un(-2+j,-2:0,1:nz,:)
+     Dx(:,-2,-2:0,1:nz) = Dx(:,-2,-2:0,1:nz) + a06(1+j)*Un(:,-2+j,-2:0,1:nz)
   end do
   !
   do j=-2,4
-     Dy(-2:0,0,1:nz,:) = Dy(-2:0,0,1:nz,:) +  a24(3+j)*Un(-2:0,0+j,1:nz,:) 
+     Dy(:,-2:0,0,1:nz) = Dy(:,-2:0,0,1:nz) +  a24(3+j)*Un(:,-2:0,0+j,1:nz) 
   end do
   do j=-1,5
-     Dy(-2:0,-1,1:nz,:) = Dy(-2:0,-1,1:nz,:) + a15(2+j)*Un(-2:0,-1+j,1:nz,:) 
+     Dy(:,-2:0,-1,1:nz) = Dy(:,-2:0,-1,1:nz) + a15(2+j)*Un(:,-2:0,-1+j,1:nz) 
   end do
   do j=0,6
-     Dy(-2:0,-2,1:nz,:) = Dy(-2:0,-2,1:nz,:) + a06(1+j)*Un(-2:0,-2+j,1:nz,:) 
+     Dy(:,-2:0,-2,1:nz) = Dy(:,-2:0,-2,1:nz) + a06(1+j)*Un(:,-2:0,-2+j,1:nz) 
   end do
   !
   do z=1,nz
-     Dz(-2:0,-2:0,z,:) = a(3)*(Un(-2:0,-2:0,z+3,:) - Un(-2:0,-2:0,z-3,:)) &
-          +a(2)*(Un(-2:0,-2:0,z+2,:) - Un(-2:0,-2:0,z-2,:)) &
-          +a(1)*(Un(-2:0,-2:0,z+1,:) - Un(-2:0,-2:0,z-1,:))
+     Dz(:,-2:0,-2:0,z) = a(3)*(Un(:,-2:0,-2:0,z+3) - Un(:,-2:0,-2:0,z-3)) &
+          +a(2)*(Un(:,-2:0,-2:0,z+2) - Un(:,-2:0,-2:0,z-2)) &
+          +a(1)*(Un(:,-2:0,-2:0,z+1) - Un(:,-2:0,-2:0,z-1))
   end do
   !
   do z=1,nz
      do y=-2,0
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1592,11 +1594,11 @@ subroutine ptsbottomleft(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1629,37 +1631,37 @@ subroutine ptsbottomback(irk)
   Dz=0.
   !
   do j=-2,4
-     Dy(1:nx,0,-2:0,:)  = Dy(1:nx,0,-2:0,:)  + a24(3+j)*Un(1:nx,0+j,-2:0,:) 
+     Dy(:,1:nx,0,-2:0)  = Dy(:,1:nx,0,-2:0)  + a24(3+j)*Un(:,1:nx,0+j,-2:0) 
   end do
   do j=-1,5
-     Dy(1:nx,-1,-2:0,:) = Dy(1:nx,-1,-2:0,:) + a15(2+j)*Un(1:nx,-1+j,-2:0,:) 
+     Dy(:,1:nx,-1,-2:0) = Dy(:,1:nx,-1,-2:0) + a15(2+j)*Un(:,1:nx,-1+j,-2:0) 
   end do
   do j=0,6
-     Dy(1:nx,-2,-2:0,:) = Dy(1:nx,-2,-2:0,:) + a06(1+j)*Un(1:nx,-2+j,-2:0,:)
+     Dy(:,1:nx,-2,-2:0) = Dy(:,1:nx,-2,-2:0) + a06(1+j)*Un(:,1:nx,-2+j,-2:0)
   end do
   !
   do j=-2,4
-     Dz(1:nx,-2:0,0,:) =  Dz(1:nx,-2:0,0,:)   + a24(3+j)*Un(1:nx,-2:0,0+j,:)
+     Dz(:,1:nx,-2:0,0) =  Dz(:,1:nx,-2:0,0)   + a24(3+j)*Un(:,1:nx,-2:0,0+j)
   end do
   do j=-1,5
-     Dz(1:nx,-2:0,-1,:) = Dz(1:nx,-2:0,-1,:) + a15(2+j)*Un(1:nx,-2:0,-1+j,:)
+     Dz(:,1:nx,-2:0,-1) = Dz(:,1:nx,-2:0,-1) + a15(2+j)*Un(:,1:nx,-2:0,-1+j)
   end do
   do j=0,6
-     Dz(1:nx,-2:0,-2,:)  = Dz(1:nx,-2:0,-2,:) + a06(1+j)*Un(1:nx,-2:0,-2+j,:)
+     Dz(:,1:nx,-2:0,-2)  = Dz(:,1:nx,-2:0,-2) + a06(1+j)*Un(:,1:nx,-2:0,-2+j)
   end do
   !
   do x=1,nx
-     Dx(x,-2:0,-2:0,:) = a(3)*(Un(x+3,-2:0,-2:0,:) - Un(x-3,-2:0,-2:0,:)) &
-          +a(2)*(Un(x+2,-2:0,-2:0,:) - Un(x-2,-2:0,-2:0,:)) &
-          +a(1)*(Un(x+1,-2:0,-2:0,:) - Un(x-1,-2:0,-2:0,:))
+     Dx(:,x,-2:0,-2:0) = a(3)*(Un(:,x+3,-2:0,-2:0) - Un(:,x-3,-2:0,-2:0)) &
+          +a(2)*(Un(:,x+2,-2:0,-2:0) - Un(:,x-2,-2:0,-2:0)) &
+          +a(1)*(Un(:,x+1,-2:0,-2:0) - Un(:,x-1,-2:0,-2:0))
   end do
   !
   do z=-2,0
      do y=-2,0
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1687,11 +1689,11 @@ subroutine ptsbottomback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1724,37 +1726,37 @@ subroutine ptsleftback(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,1:ny,-2:0,:) = Dx(0,1:ny,-2:0,:) +  a24(3+j)*Un(0+j,1:ny,-2:0,:)
+     Dx(:,0,1:ny,-2:0) = Dx(:,0,1:ny,-2:0) +  a24(3+j)*Un(:,0+j,1:ny,-2:0)
   end do
   do j=-1,5
-     Dx(-1,1:ny,-2:0,:) = Dx(-1,1:ny,-2:0,:) + a15(2+j)*Un(-1+j,1:ny,-2:0,:)
+     Dx(:,-1,1:ny,-2:0) = Dx(:,-1,1:ny,-2:0) + a15(2+j)*Un(:,-1+j,1:ny,-2:0)
   end do
   do j=0,6
-     Dx(-2,1:ny,-2:0,:) = Dx(-2,1:ny,-2:0,:) + a06(1+j)*Un(-2+j,1:ny,-2:0,:)
+     Dx(:,-2,1:ny,-2:0) = Dx(:,-2,1:ny,-2:0) + a06(1+j)*Un(:,-2+j,1:ny,-2:0)
   end do
   !
   do j=-2,4
-     Dz(-2:0,1:ny,0,:) =  Dz(-2:0,1:ny,0,:)   + a24(3+j)*Un(-2:0,1:ny,0+j,:)
+     Dz(:,-2:0,1:ny,0) =  Dz(:,-2:0,1:ny,0)   + a24(3+j)*Un(:,-2:0,1:ny,0+j)
   end do
   do j=-1,5
-     Dz(-2:0,1:ny,-1,:) = Dz(-2:0,1:ny,-1,:) + a15(2+j)*Un(-2:0,1:ny,-1+j,:)
+     Dz(:,-2:0,1:ny,-1) = Dz(:,-2:0,1:ny,-1) + a15(2+j)*Un(:,-2:0,1:ny,-1+j)
   end do
   do j=0,6
-     Dz(-2:0,1:ny,-2,:)  = Dz(-2:0,1:ny,-2,:) + a06(1+j)*Un(-2:0,1:ny,-2+j,:)
+     Dz(:,-2:0,1:ny,-2)  = Dz(:,-2:0,1:ny,-2) + a06(1+j)*Un(:,-2:0,1:ny,-2+j)
   end do
   !
   do y=1,ny
-     Dy(-2:0,y,-2:0,:) = a(3)*(Un(-2:0,y+3,-2:0,:) - Un(-2:0,y-3,-2:0,:)) &
-          +a(2)*(Un(-2:0,y+2,-2:0,:) - Un(-2:0,y-2,-2:0,:)) &
-          +a(1)*(Un(-2:0,y+1,-2:0,:) - Un(-2:0,y-1,-2:0,:))
+     Dy(:,-2:0,y,-2:0) = a(3)*(Un(:,-2:0,y+3,-2:0) - Un(:,-2:0,y-3,-2:0)) &
+          +a(2)*(Un(:,-2:0,y+2,-2:0) - Un(:,-2:0,y-2,-2:0)) &
+          +a(1)*(Un(:,-2:0,y+1,-2:0) - Un(:,-2:0,y-1,-2:0))
   end do
   !
   do z=-2,0
      do y=1,ny
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1782,11 +1784,11 @@ subroutine ptsleftback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1819,37 +1821,37 @@ subroutine ptstopright(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,ny+1:ny+3,1:nz,:) = Dx(nx+1,ny+1:ny+3,1:nz,:) - a24(3-j)*Un(nx+1+j,ny+1:ny+3,1:nz,:)
+     Dx(:,nx+1,ny+1:ny+3,1:nz) = Dx(:,nx+1,ny+1:ny+3,1:nz) - a24(3-j)*Un(:,nx+1+j,ny+1:ny+3,1:nz)
   end do
   do j=-5,1
-     Dx(nx+2,ny+1:ny+3,1:nz,:) = Dx(nx+2,ny+1:ny+3,1:nz,:) - a15(2-j)*Un(nx+2+j,ny+1:ny+3,1:nz,:)
+     Dx(:,nx+2,ny+1:ny+3,1:nz) = Dx(:,nx+2,ny+1:ny+3,1:nz) - a15(2-j)*Un(:,nx+2+j,ny+1:ny+3,1:nz)
   end do
   do j=-6,0
-     Dx(nx+3,ny+1:ny+3,1:nz,:) = Dx(nx+3,ny+1:ny+3,1:nz,:) - a06(1-j)*Un(nx+3+j,ny+1:ny+3,1:nz,:)
+     Dx(:,nx+3,ny+1:ny+3,1:nz) = Dx(:,nx+3,ny+1:ny+3,1:nz) - a06(1-j)*Un(:,nx+3+j,ny+1:ny+3,1:nz)
   end do
   !
   do j=-4,2
-     Dy(nx+1:nx+3,ny+1,1:nz,:) = Dy(nx+1:nx+3,ny+1,1:nz,:) - a24(3-j)*Un(nx+1:nx+3,ny+1+j,1:nz,:) 
+     Dy(:,nx+1:nx+3,ny+1,1:nz) = Dy(:,nx+1:nx+3,ny+1,1:nz) - a24(3-j)*Un(:,nx+1:nx+3,ny+1+j,1:nz) 
   end do
   do j=-5,1
-     Dy(nx+1:nx+3,ny+2,1:nz,:) = Dy(nx+1:nx+3,ny+2,1:nz,:) - a15(2-j)*Un(nx+1:nx+3,ny+2+j,1:nz,:) 
+     Dy(:,nx+1:nx+3,ny+2,1:nz) = Dy(:,nx+1:nx+3,ny+2,1:nz) - a15(2-j)*Un(:,nx+1:nx+3,ny+2+j,1:nz) 
   end do
   do j=-6,0
-     Dy(nx+1:nx+3,ny+3,1:nz,:) = Dy(nx+1:nx+3,ny+3,1:nz,:) - a06(1-j)*Un(nx+1:nx+3,ny+3+j,1:nz,:) 
+     Dy(:,nx+1:nx+3,ny+3,1:nz) = Dy(:,nx+1:nx+3,ny+3,1:nz) - a06(1-j)*Un(:,nx+1:nx+3,ny+3+j,1:nz) 
   end do
   !
   do z=1,nz
-     Dz(nx+1:nx+3,ny+1:ny+3,z,:) = a(3)*(Un(nx+1:nx+3,ny+1:ny+3,z+3,:) - Un(nx+1:nx+3,ny+1:ny+3,z-3,:)) &
-          +a(2)*(Un(nx+1:nx+3,ny+1:ny+3,z+2,:) - Un(nx+1:nx+3,ny+1:ny+3,z-2,:)) &
-          +a(1)*(Un(nx+1:nx+3,ny+1:ny+3,z+1,:) - Un(nx+1:nx+3,ny+1:ny+3,z-1,:))
+     Dz(:,nx+1:nx+3,ny+1:ny+3,z) = a(3)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+3) - Un(:,nx+1:nx+3,ny+1:ny+3,z-3)) &
+          +a(2)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+2) - Un(:,nx+1:nx+3,ny+1:ny+3,z-2)) &
+          +a(1)*(Un(:,nx+1:nx+3,ny+1:ny+3,z+1) - Un(:,nx+1:nx+3,ny+1:ny+3,z-1))
   end do
   !
   do z=1,nz
      do y=ny+1,ny+3
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1877,11 +1879,11 @@ subroutine ptstopright(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -1915,37 +1917,37 @@ subroutine ptsbottomright(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,-2:0,1:nz,:) = Dx(nx+1,-2:0,1:nz,:) - a24(3-j)*Un(nx+1+j,-2:0,1:nz,:)
+     Dx(:,nx+1,-2:0,1:nz) = Dx(:,nx+1,-2:0,1:nz) - a24(3-j)*Un(:,nx+1+j,-2:0,1:nz)
   end do
   do j=-5,1
-     Dx(nx+2,-2:0,1:nz,:) = Dx(nx+2,-2:0,1:nz,:) - a15(2-j)*Un(nx+2+j,-2:0,1:nz,:)
+     Dx(:,nx+2,-2:0,1:nz) = Dx(:,nx+2,-2:0,1:nz) - a15(2-j)*Un(:,nx+2+j,-2:0,1:nz)
   end do
   do j=-6,0
-     Dx(nx+3,-2:0,1:nz,:) = Dx(nx+3,-2:0,1:nz,:) - a06(1-j)*Un(nx+3+j,-2:0,1:nz,:)
+     Dx(:,nx+3,-2:0,1:nz) = Dx(:,nx+3,-2:0,1:nz) - a06(1-j)*Un(:,nx+3+j,-2:0,1:nz)
   end do
   !
   do j=-2,4
-     Dy(nx+1:nx+3,0,1:nz,:)  = Dy(nx+1:nx+3,0,1:nz,:)  + a24(3+j)*Un(nx+1:nx+3,0+j,1:nz,:) 
+     Dy(:,nx+1:nx+3,0,1:nz)  = Dy(:,nx+1:nx+3,0,1:nz)  + a24(3+j)*Un(:,nx+1:nx+3,0+j,1:nz) 
   end do
   do j=-1,5
-     Dy(nx+1:nx+3,-1,1:nz,:) = Dy(nx+1:nx+3,-1,1:nz,:) + a15(2+j)*Un(nx+1:nx+3,-1+j,1:nz,:) 
+     Dy(:,nx+1:nx+3,-1,1:nz) = Dy(:,nx+1:nx+3,-1,1:nz) + a15(2+j)*Un(:,nx+1:nx+3,-1+j,1:nz) 
   end do
   do j=0,6
-     Dy(nx+1:nx+3,-2,1:nz,:) = Dy(nx+1:nx+3,-2,1:nz,:) + a06(1+j)*Un(nx+1:nx+3,-2+j,1:nz,:)
+     Dy(:,nx+1:nx+3,-2,1:nz) = Dy(:,nx+1:nx+3,-2,1:nz) + a06(1+j)*Un(:,nx+1:nx+3,-2+j,1:nz)
   end do
   !
   do z=1,nz
-     Dz(nx+1:nx+3,-2:0,z,:) = a(3)*(Un(nx+1:nx+3,-2:0,z+3,:) - Un(nx+1:nx+3,-2:0,z-3,:)) &
-          +a(2)*(Un(nx+1:nx+3,-2:0,z+2,:) - Un(nx+1:nx+3,-2:0,z-2,:)) &
-          +a(1)*(Un(nx+1:nx+3,-2:0,z+1,:) - Un(nx+1:nx+3,-2:0,z-1,:))
+     Dz(:,nx+1:nx+3,-2:0,z) = a(3)*(Un(:,nx+1:nx+3,-2:0,z+3) - Un(:,nx+1:nx+3,-2:0,z-3)) &
+          +a(2)*(Un(:,nx+1:nx+3,-2:0,z+2) - Un(:,nx+1:nx+3,-2:0,z-2)) &
+          +a(1)*(Un(:,nx+1:nx+3,-2:0,z+1) - Un(:,nx+1:nx+3,-2:0,z-1))
   end do
   !
   do z=1,nz
      do y=-2,0
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -1973,11 +1975,11 @@ subroutine ptsbottomright(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2010,37 +2012,37 @@ subroutine ptstopleft(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,ny+1:ny+3,1:nz,:) = Dx(0,ny+1:ny+3,1:nz,:) +  a24(3+j)*Un(0+j,ny+1:ny+3,1:nz,:)
+     Dx(:,0,ny+1:ny+3,1:nz) = Dx(:,0,ny+1:ny+3,1:nz) +  a24(3+j)*Un(:,0+j,ny+1:ny+3,1:nz)
   end do
   do j=-1,5
-     Dx(-1,ny+1:ny+3,1:nz,:) = Dx(-1,ny+1:ny+3,1:nz,:) + a15(2+j)*Un(-1+j,ny+1:ny+3,1:nz,:)
+     Dx(:,-1,ny+1:ny+3,1:nz) = Dx(:,-1,ny+1:ny+3,1:nz) + a15(2+j)*Un(:,-1+j,ny+1:ny+3,1:nz)
   end do
   do j=0,6
-     Dx(-2,ny+1:ny+3,1:nz,:) = Dx(-2,ny+1:ny+3,1:nz,:) + a06(1+j)*Un(-2+j,ny+1:ny+3,1:nz,:)
+     Dx(:,-2,ny+1:ny+3,1:nz) = Dx(:,-2,ny+1:ny+3,1:nz) + a06(1+j)*Un(:,-2+j,ny+1:ny+3,1:nz)
   end do
   !
   do j=-4,2
-     Dy(-2:0,ny+1,1:nz,:) = Dy(-2:0,ny+1,1:nz,:) - a24(3-j)*Un(-2:0,ny+1+j,1:nz,:) 
+     Dy(:,-2:0,ny+1,1:nz) = Dy(:,-2:0,ny+1,1:nz) - a24(3-j)*Un(:,-2:0,ny+1+j,1:nz) 
   end do
   do j=-5,1
-     Dy(-2:0,ny+2,1:nz,:) = Dy(-2:0,ny+2,1:nz,:) - a15(2-j)*Un(-2:0,ny+2+j,1:nz,:) 
+     Dy(:,-2:0,ny+2,1:nz) = Dy(:,-2:0,ny+2,1:nz) - a15(2-j)*Un(:,-2:0,ny+2+j,1:nz) 
   end do
   do j=-6,0
-     Dy(-2:0,ny+3,1:nz,:) = Dy(-2:0,ny+3,1:nz,:) - a06(1-j)*Un(-2:0,ny+3+j,1:nz,:) 
+     Dy(:,-2:0,ny+3,1:nz) = Dy(:,-2:0,ny+3,1:nz) - a06(1-j)*Un(:,-2:0,ny+3+j,1:nz) 
   end do
   !
   do z=1,nz
-     Dz(-2:0,ny+1:ny+3,z,:) = a(3)*(Un(-2:0,ny+1:ny+3,z+3,:) - Un(-2:0,ny+1:ny+3,z-3,:)) &
-          +a(2)*(Un(-2:0,ny+1:ny+3,z+2,:) - Un(-2:0,ny+1:ny+3,z-2,:)) &
-          +a(1)*(Un(-2:0,ny+1:ny+3,z+1,:) - Un(-2:0,ny+1:ny+3,z-1,:))
+     Dz(:,-2:0,ny+1:ny+3,z) = a(3)*(Un(:,-2:0,ny+1:ny+3,z+3) - Un(:,-2:0,ny+1:ny+3,z-3)) &
+          +a(2)*(Un(:,-2:0,ny+1:ny+3,z+2) - Un(:,-2:0,ny+1:ny+3,z-2)) &
+          +a(1)*(Un(:,-2:0,ny+1:ny+3,z+1) - Un(:,-2:0,ny+1:ny+3,z-1))
   end do
   !
   do z=1,nz
      do y=ny+1,ny+3
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2068,11 +2070,11 @@ subroutine ptstopleft(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2106,37 +2108,37 @@ subroutine ptstopback(irk)
   Dz=0.
   !
   do j=-4,2
-     Dy(1:nx,ny+1,-2:0,:) = Dy(1:nx,ny+1,-2:0,:) - a24(3-j)*Un(1:nx,ny+1+j,-2:0,:) 
+     Dy(:,1:nx,ny+1,-2:0) = Dy(:,1:nx,ny+1,-2:0) - a24(3-j)*Un(:,1:nx,ny+1+j,-2:0) 
   end do
   do j=-5,1
-     Dy(1:nx,ny+2,-2:0,:) = Dy(1:nx,ny+2,-2:0,:) - a15(2-j)*Un(1:nx,ny+2+j,-2:0,:) 
+     Dy(:,1:nx,ny+2,-2:0) = Dy(:,1:nx,ny+2,-2:0) - a15(2-j)*Un(:,1:nx,ny+2+j,-2:0) 
   end do
   do j=-6,0
-     Dy(1:nx,ny+3,-2:0,:) = Dy(1:nx,ny+3,-2:0,:) - a06(1-j)*Un(1:nx,ny+3+j,-2:0,:) 
+     Dy(:,1:nx,ny+3,-2:0) = Dy(:,1:nx,ny+3,-2:0) - a06(1-j)*Un(:,1:nx,ny+3+j,-2:0) 
   end do
   !
   do j=-2,4
-     Dz(1:nx,ny+1:ny+3,0,:) =  Dz(1:nx,ny+1:ny+3,0,:)   + a24(3+j)*Un(1:nx,ny+1:ny+3,0+j,:)
+     Dz(:,1:nx,ny+1:ny+3,0) =  Dz(:,1:nx,ny+1:ny+3,0)   + a24(3+j)*Un(:,1:nx,ny+1:ny+3,0+j)
   end do
   do j=-1,5
-     Dz(1:nx,ny+1:ny+3,-1,:) = Dz(1:nx,ny+1:ny+3,-1,:) + a15(2+j)*Un(1:nx,ny+1:ny+3,-1+j,:)
+     Dz(:,1:nx,ny+1:ny+3,-1) = Dz(:,1:nx,ny+1:ny+3,-1) + a15(2+j)*Un(:,1:nx,ny+1:ny+3,-1+j)
   end do
   do j=0,6
-     Dz(1:nx,ny+1:ny+3,-2,:)  = Dz(1:nx,ny+1:ny+3,-2,:) + a06(1+j)*Un(1:nx,ny+1:ny+3,-2+j,:)
+     Dz(:,1:nx,ny+1:ny+3,-2)  = Dz(:,1:nx,ny+1:ny+3,-2) + a06(1+j)*Un(:,1:nx,ny+1:ny+3,-2+j)
   end do
   !
   do x=1,nx
-     Dx(x,ny+1:ny+3,-2:0,:) = a(3)*(Un(x+3,ny+1:ny+3,-2:0,:) - Un(x-3,ny+1:ny+3,-2:0,:)) &
-          +a(2)*(Un(x+2,ny+1:ny+3,-2:0,:) - Un(x-2,ny+1:ny+3,-2:0,:)) &
-          +a(1)*(Un(x+1,ny+1:ny+3,-2:0,:) - Un(x-1,ny+1:ny+3,-2:0,:))
+     Dx(:,x,ny+1:ny+3,-2:0) = a(3)*(Un(:,x+3,ny+1:ny+3,-2:0) - Un(:,x-3,ny+1:ny+3,-2:0)) &
+          +a(2)*(Un(:,x+2,ny+1:ny+3,-2:0) - Un(:,x-2,ny+1:ny+3,-2:0)) &
+          +a(1)*(Un(:,x+1,ny+1:ny+3,-2:0) - Un(:,x-1,ny+1:ny+3,-2:0))
   end do
   !
   do z=-2,0
      do y=ny+1,ny+3
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2164,11 +2166,11 @@ subroutine ptstopback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2202,37 +2204,37 @@ subroutine ptsrightback(irk)
   Dy = 0.
   !
   do j=-4,2
-     Dx(nx+1,1:ny,-2:0,:) = Dx(nx+1,1:ny,-2:0,:) - a24(3-j)*Un(nx+1+j,1:ny,-2:0,:)
+     Dx(:,nx+1,1:ny,-2:0) = Dx(:,nx+1,1:ny,-2:0) - a24(3-j)*Un(:,nx+1+j,1:ny,-2:0)
   end do
   do j=-5,1
-     Dx(nx+2,1:ny,-2:0,:) = Dx(nx+2,1:ny,-2:0,:) - a15(2-j)*Un(nx+2+j,1:ny,-2:0,:)
+     Dx(:,nx+2,1:ny,-2:0) = Dx(:,nx+2,1:ny,-2:0) - a15(2-j)*Un(:,nx+2+j,1:ny,-2:0)
   end do
   do j=-6,0
-     Dx(nx+3,1:ny,-2:0,:) = Dx(nx+3,1:ny,-2:0,:) - a06(1-j)*Un(nx+3+j,1:ny,-2:0,:)
+     Dx(:,nx+3,1:ny,-2:0) = Dx(:,nx+3,1:ny,-2:0) - a06(1-j)*Un(:,nx+3+j,1:ny,-2:0)
   end do
   !
   do j=-2,4
-     Dz(nx+1:nx+3,1:ny,0,:) =  Dz(nx+1:nx+3,1:ny,0,:)   + a24(3+j)*Un(nx+1:nx+3,1:ny,0+j,:)
+     Dz(:,nx+1:nx+3,1:ny,0) =  Dz(:,nx+1:nx+3,1:ny,0)   + a24(3+j)*Un(:,nx+1:nx+3,1:ny,0+j)
   end do
   do j=-1,5
-     Dz(nx+1:nx+3,1:ny,-1,:) = Dz(nx+1:nx+3,1:ny,-1,:) + a15(2+j)*Un(nx+1:nx+3,1:ny,-1+j,:)
+     Dz(:,nx+1:nx+3,1:ny,-1) = Dz(:,nx+1:nx+3,1:ny,-1) + a15(2+j)*Un(:,nx+1:nx+3,1:ny,-1+j)
   end do
   do j=0,6
-     Dz(nx+1:nx+3,1:ny,-2,:)  = Dz(nx+1:nx+3,1:ny,-2,:) + a06(1+j)*Un(nx+1:nx+3,1:ny,-2+j,:)
+     Dz(:,nx+1:nx+3,1:ny,-2)  = Dz(:,nx+1:nx+3,1:ny,-2) + a06(1+j)*Un(:,nx+1:nx+3,1:ny,-2+j)
   end do
   !
   do y=1,ny
-     Dy(nx+1:nx+3,y,-2:0,:) = a(3)*(Un(nx+1:nx+3,y+3,-2:0,:) - Un(nx+1:nx+3,y-3,-2:0,:)) &
-          +a(2)*(Un(nx+1:nx+3,y+2,-2:0,:) - Un(nx+1:nx+3,y-2,-2:0,:)) &
-          +a(1)*(Un(nx+1:nx+3,y+1,-2:0,:) - Un(nx+1:nx+3,y-1,-2:0,:))
+     Dy(:,nx+1:nx+3,y,-2:0) = a(3)*(Un(:,nx+1:nx+3,y+3,-2:0) - Un(:,nx+1:nx+3,y-3,-2:0)) &
+          +a(2)*(Un(:,nx+1:nx+3,y+2,-2:0) - Un(:,nx+1:nx+3,y-2,-2:0)) &
+          +a(1)*(Un(:,nx+1:nx+3,y+1,-2:0) - Un(:,nx+1:nx+3,y-1,-2:0))
   end do
   !
   do z=-2,0
      do y=1,ny
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2260,11 +2262,11 @@ subroutine ptsrightback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2297,37 +2299,37 @@ subroutine ptsrightfront(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,1:ny,nz+1:nz+3,:) = Dx(nx+1,1:ny,nz+1:nz+3,:) - a24(3-j)*Un(nx+1+j,1:ny,nz+1:nz+3,:)
+     Dx(:,nx+1,1:ny,nz+1:nz+3) = Dx(:,nx+1,1:ny,nz+1:nz+3) - a24(3-j)*Un(:,nx+1+j,1:ny,nz+1:nz+3)
   end do
   do j=-5,1
-     Dx(nx+2,1:ny,nz+1:nz+3,:) = Dx(nx+2,1:ny,nz+1:nz+3,:) - a15(2-j)*Un(nx+2+j,1:ny,nz+1:nz+3,:)
+     Dx(:,nx+2,1:ny,nz+1:nz+3) = Dx(:,nx+2,1:ny,nz+1:nz+3) - a15(2-j)*Un(:,nx+2+j,1:ny,nz+1:nz+3)
   end do
   do j=-6,0
-     Dx(nx+3,1:ny,nz+1:nz+3,:) = Dx(nx+3,1:ny,nz+1:nz+3,:) - a06(1-j)*Un(nx+3+j,1:ny,nz+1:nz+3,:)
+     Dx(:,nx+3,1:ny,nz+1:nz+3) = Dx(:,nx+3,1:ny,nz+1:nz+3) - a06(1-j)*Un(:,nx+3+j,1:ny,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dz(nx+1:nx+3,1:ny,nz+1,:) = Dz(nx+1:nx+3,1:ny,nz+1,:) - a24(3-j)*Un(nx+1:nx+3,1:ny,nz+1+j,:) 
+     Dz(:,nx+1:nx+3,1:ny,nz+1) = Dz(:,nx+1:nx+3,1:ny,nz+1) - a24(3-j)*Un(:,nx+1:nx+3,1:ny,nz+1+j) 
   end do
   do j=-5,1
-     Dz(nx+1:nx+3,1:ny,nz+2,:) = Dz(nx+1:nx+3,1:ny,nz+2,:) - a15(2-j)*Un(nx+1:nx+3,1:ny,nz+2+j,:) 
+     Dz(:,nx+1:nx+3,1:ny,nz+2) = Dz(:,nx+1:nx+3,1:ny,nz+2) - a15(2-j)*Un(:,nx+1:nx+3,1:ny,nz+2+j) 
   end do
   do j=-6,0
-     Dz(nx+1:nx+3,1:ny,nz+3,:) = Dz(nx+1:nx+3,1:ny,nz+3,:) - a06(1-j)*Un(nx+1:nx+3,1:ny,nz+3+j,:) 
+     Dz(:,nx+1:nx+3,1:ny,nz+3) = Dz(:,nx+1:nx+3,1:ny,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,1:ny,nz+3+j) 
   end do
   !
   do y=1,ny
-     Dy(nx+1:nx+3,y,nz+1:nz+3,:) = a(3)*(Un(nx+1:nx+3,y+3,nz+1:nz+3,:) - Un(nx+1:nx+3,y-3,nz+1:nz+3,:)) &
-          +a(2)*(Un(nx+1:nx+3,y+2,nz+1:nz+3,:) - Un(nx+1:nx+3,y-2,nz+1:nz+3,:)) &
-          +a(1)*(Un(nx+1:nx+3,y+1,nz+1:nz+3,:) - Un(nx+1:nx+3,y-1,nz+1:nz+3,:))
+     Dy(:,nx+1:nx+3,y,nz+1:nz+3) = a(3)*(Un(:,nx+1:nx+3,y+3,nz+1:nz+3) - Un(:,nx+1:nx+3,y-3,nz+1:nz+3)) &
+          +a(2)*(Un(:,nx+1:nx+3,y+2,nz+1:nz+3) - Un(:,nx+1:nx+3,y-2,nz+1:nz+3)) &
+          +a(1)*(Un(:,nx+1:nx+3,y+1,nz+1:nz+3) - Un(:,nx+1:nx+3,y-1,nz+1:nz+3))
   end do
   !
   do z=nz+1,nz+3
      do y=1,ny
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2355,11 +2357,11 @@ subroutine ptsrightfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2392,37 +2394,37 @@ subroutine ptsleftfront(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,1:ny,nz+1:nz+3,:) = Dx(0,1:ny,nz+1:nz+3,:) +  a24(3+j)*Un(0+j,1:ny,nz+1:nz+3,:)
+     Dx(:,0,1:ny,nz+1:nz+3) = Dx(:,0,1:ny,nz+1:nz+3) +  a24(3+j)*Un(:,0+j,1:ny,nz+1:nz+3)
   end do
   do j=-1,5
-     Dx(-1,1:ny,nz+1:nz+3,:) = Dx(-1,1:ny,nz+1:nz+3,:) + a15(2+j)*Un(-1+j,1:ny,nz+1:nz+3,:)
+     Dx(:,-1,1:ny,nz+1:nz+3) = Dx(:,-1,1:ny,nz+1:nz+3) + a15(2+j)*Un(:,-1+j,1:ny,nz+1:nz+3)
   end do
   do j=0,6
-     Dx(-2,1:ny,nz+1:nz+3,:) = Dx(-2,1:ny,nz+1:nz+3,:) + a06(1+j)*Un(-2+j,1:ny,nz+1:nz+3,:)
+     Dx(:,-2,1:ny,nz+1:nz+3) = Dx(:,-2,1:ny,nz+1:nz+3) + a06(1+j)*Un(:,-2+j,1:ny,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dz(-2:0,1:ny,nz+1,:) = Dz(-2:0,1:ny,nz+1,:) - a24(3-j)*Un(-2:0,1:ny,nz+1+j,:) 
+     Dz(:,-2:0,1:ny,nz+1) = Dz(:,-2:0,1:ny,nz+1) - a24(3-j)*Un(:,-2:0,1:ny,nz+1+j) 
   end do
   do j=-5,1
-     Dz(-2:0,1:ny,nz+2,:) = Dz(-2:0,1:ny,nz+2,:) - a15(2-j)*Un(-2:0,1:ny,nz+2+j,:) 
+     Dz(:,-2:0,1:ny,nz+2) = Dz(:,-2:0,1:ny,nz+2) - a15(2-j)*Un(:,-2:0,1:ny,nz+2+j) 
   end do
   do j=-6,0
-     Dz(-2:0,1:ny,nz+3,:) = Dz(-2:0,1:ny,nz+3,:) - a06(1-j)*Un(-2:0,1:ny,nz+3+j,:) 
+     Dz(:,-2:0,1:ny,nz+3) = Dz(:,-2:0,1:ny,nz+3) - a06(1-j)*Un(:,-2:0,1:ny,nz+3+j) 
   end do
   !
   do y=1,ny
-     Dy(-2:0,y,nz+1:nz+3,:) = a(3)*(Un(-2:0,y+3,nz+1:nz+3,:) - Un(-2:0,y-3,nz+1:nz+3,:)) &
-          +a(2)*(Un(-2:0,y+2,nz+1:nz+3,:) - Un(-2:0,y-2,nz+1:nz+3,:)) &
-          +a(1)*(Un(-2:0,y+1,nz+1:nz+3,:) - Un(-2:0,y-1,nz+1:nz+3,:))
+     Dy(:,-2:0,y,nz+1:nz+3) = a(3)*(Un(:,-2:0,y+3,nz+1:nz+3) - Un(:,-2:0,y-3,nz+1:nz+3)) &
+          +a(2)*(Un(:,-2:0,y+2,nz+1:nz+3) - Un(:,-2:0,y-2,nz+1:nz+3)) &
+          +a(1)*(Un(:,-2:0,y+1,nz+1:nz+3) - Un(:,-2:0,y-1,nz+1:nz+3))
   end do
   !
   do z=nz+1,nz+3
      do y=1,ny
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2450,11 +2452,11 @@ subroutine ptsleftfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2487,37 +2489,37 @@ subroutine ptsbottomfront(irk)
   Dy=0.
   !
   do j=-2,4
-     Dy(1:nx,0,nz+1:nz+3,:)  = Dy(1:nx,0,nz+1:nz+3,:)  + a24(3+j)*Un(1:nx,0+j,nz+1:nz+3,:) 
+     Dy(:,1:nx,0,nz+1:nz+3)  = Dy(:,1:nx,0,nz+1:nz+3)  + a24(3+j)*Un(:,1:nx,0+j,nz+1:nz+3) 
   end do
   do j=-1,5
-     Dy(1:nx,-1,nz+1:nz+3,:) = Dy(1:nx,-1,nz+1:nz+3,:) + a15(2+j)*Un(1:nx,-1+j,nz+1:nz+3,:) 
+     Dy(:,1:nx,-1,nz+1:nz+3) = Dy(:,1:nx,-1,nz+1:nz+3) + a15(2+j)*Un(:,1:nx,-1+j,nz+1:nz+3) 
   end do
   do j=0,6
-     Dy(1:nx,-2,nz+1:nz+3,:) = Dy(1:nx,-2,nz+1:nz+3,:) + a06(1+j)*Un(1:nx,-2+j,nz+1:nz+3,:)
+     Dy(:,1:nx,-2,nz+1:nz+3) = Dy(:,1:nx,-2,nz+1:nz+3) + a06(1+j)*Un(:,1:nx,-2+j,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dz(1:nx,-2:0,nz+1,:) = Dz(1:nx,-2:0,nz+1,:) - a24(3-j)*Un(1:nx,-2:0,nz+1+j,:) 
+     Dz(:,1:nx,-2:0,nz+1) = Dz(:,1:nx,-2:0,nz+1) - a24(3-j)*Un(:,1:nx,-2:0,nz+1+j) 
   end do
   do j=-5,1
-     Dz(1:nx,-2:0,nz+2,:) = Dz(1:nx,-2:0,nz+2,:) - a15(2-j)*Un(1:nx,-2:0,nz+2+j,:) 
+     Dz(:,1:nx,-2:0,nz+2) = Dz(:,1:nx,-2:0,nz+2) - a15(2-j)*Un(:,1:nx,-2:0,nz+2+j) 
   end do
   do j=-6,0
-     Dz(1:nx,-2:0,nz+3,:) = Dz(1:nx,-2:0,nz+3,:) - a06(1-j)*Un(1:nx,-2:0,nz+3+j,:) 
+     Dz(:,1:nx,-2:0,nz+3) = Dz(:,1:nx,-2:0,nz+3) - a06(1-j)*Un(:,1:nx,-2:0,nz+3+j) 
   end do
   !
   do x=1,nx
-     Dx(x,-2:0,nz+1:nz+3,:) = a(3)*(Un(x+3,-2:0,nz+1:nz+3,:) - Un(x-3,-2:0,nz+1:nz+3,:)) &
-          +a(2)*(Un(x+2,-2:0,nz+1:nz+3,:) - Un(x-2,-2:0,nz+1:nz+3,:)) &
-          +a(1)*(Un(x+1,-2:0,nz+1:nz+3,:) - Un(x-1,-2:0,nz+1:nz+3,:))
+     Dx(:,x,-2:0,nz+1:nz+3) = a(3)*(Un(:,x+3,-2:0,nz+1:nz+3) - Un(:,x-3,-2:0,nz+1:nz+3)) &
+          +a(2)*(Un(:,x+2,-2:0,nz+1:nz+3) - Un(:,x-2,-2:0,nz+1:nz+3)) &
+          +a(1)*(Un(:,x+1,-2:0,nz+1:nz+3) - Un(:,x-1,-2:0,nz+1:nz+3))
   end do
   !
   do z=nz+1,nz+3
      do y=-2,0
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2545,11 +2547,11 @@ subroutine ptsbottomfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !      
         end do
@@ -2582,37 +2584,37 @@ subroutine ptstopfront(irk)
   Dx = 0.
   !
   do j=-4,2
-     Dy(1:nx,ny+1,nz+1:nz+3,:) = Dy(1:nx,ny+1,nz+1:nz+3,:) - a24(3-j)*Un(1:nx,ny+1+j,nz+1:nz+3,:) 
+     Dy(:,1:nx,ny+1,nz+1:nz+3) = Dy(:,1:nx,ny+1,nz+1:nz+3) - a24(3-j)*Un(:,1:nx,ny+1+j,nz+1:nz+3) 
   end do
   do j=-5,1
-     Dy(1:nx,ny+2,nz+1:nz+3,:) = Dy(1:nx,ny+2,nz+1:nz+3,:) - a15(2-j)*Un(1:nx,ny+2+j,nz+1:nz+3,:) 
+     Dy(:,1:nx,ny+2,nz+1:nz+3) = Dy(:,1:nx,ny+2,nz+1:nz+3) - a15(2-j)*Un(:,1:nx,ny+2+j,nz+1:nz+3) 
   end do
   do j=-6,0
-     Dy(1:nx,ny+3,nz+1:nz+3,:) = Dy(1:nx,ny+3,nz+1:nz+3,:) - a06(1-j)*Un(1:nx,ny+3+j,nz+1:nz+3,:) 
+     Dy(:,1:nx,ny+3,nz+1:nz+3) = Dy(:,1:nx,ny+3,nz+1:nz+3) - a06(1-j)*Un(:,1:nx,ny+3+j,nz+1:nz+3) 
   end do
   !
   do j=-4,2
-     Dz(1:nx,ny+1:ny+3,nz+1,:) = Dz(1:nx,ny+1:ny+3,nz+1,:) - a24(3-j)*Un(1:nx,ny+1:ny+3,nz+1+j,:) 
+     Dz(:,1:nx,ny+1:ny+3,nz+1) = Dz(:,1:nx,ny+1:ny+3,nz+1) - a24(3-j)*Un(:,1:nx,ny+1:ny+3,nz+1+j) 
   end do
   do j=-5,1
-     Dz(1:nx,ny+1:ny+3,nz+2,:) = Dz(1:nx,ny+1:ny+3,nz+2,:) - a15(2-j)*Un(1:nx,ny+1:ny+3,nz+2+j,:) 
+     Dz(:,1:nx,ny+1:ny+3,nz+2) = Dz(:,1:nx,ny+1:ny+3,nz+2) - a15(2-j)*Un(:,1:nx,ny+1:ny+3,nz+2+j) 
   end do
   do j=-6,0
-     Dz(1:nx,ny+1:ny+3,nz+3,:) = Dz(1:nx,ny+1:ny+3,nz+3,:) - a06(1-j)*Un(1:nx,ny+1:ny+3,nz+3+j,:) 
+     Dz(:,1:nx,ny+1:ny+3,nz+3) = Dz(:,1:nx,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,1:nx,ny+1:ny+3,nz+3+j) 
   end do
   !
   do x=1,nx
-     Dx(x,ny+1:ny+3,nz+1:nz+3,:) = a(3)*(Un(x+3,ny+1:ny+3,nz+1:nz+3,:) - Un(x-3,ny+1:ny+3,nz+1:nz+3,:)) &
-          +a(2)*(Un(x+2,ny+1:ny+3,nz+1:nz+3,:) - Un(x-2,ny+1:ny+3,nz+1:nz+3,:)) &
-          +a(1)*(Un(x+1,ny+1:ny+3,nz+1:nz+3,:) - Un(x-1,ny+1:ny+3,nz+1:nz+3,:))
+     Dx(:,x,ny+1:ny+3,nz+1:nz+3) = a(3)*(Un(:,x+3,ny+1:ny+3,nz+1:nz+3) - Un(:,x-3,ny+1:ny+3,nz+1:nz+3)) &
+          +a(2)*(Un(:,x+2,ny+1:ny+3,nz+1:nz+3) - Un(:,x-2,ny+1:ny+3,nz+1:nz+3)) &
+          +a(1)*(Un(:,x+1,ny+1:ny+3,nz+1:nz+3) - Un(:,x-1,ny+1:ny+3,nz+1:nz+3))
   end do
   !
   do z=nz+1,nz+3
      do y=ny+1,ny+3
         do x=1,nx
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2640,11 +2642,11 @@ subroutine ptstopfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z)  + zc*Dz(i,x,y,z)  + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2677,41 +2679,41 @@ subroutine pts_c_bottomleftback(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,-2:0,-2:0,:) = Dx(0,-2:0,-2:0,:) +  a24(3+j)*Un(0+j,-2:0,-2:0,:)
+     Dx(:,0,-2:0,-2:0) = Dx(:,0,-2:0,-2:0) +  a24(3+j)*Un(:,0+j,-2:0,-2:0)
   end do
   do j=-1,5
-     Dx(-1,-2:0,-2:0,:) = Dx(-1,-2:0,-2:0,:) + a15(2+j)*Un(-1+j,-2:0,-2:0,:)
+     Dx(:,-1,-2:0,-2:0) = Dx(:,-1,-2:0,-2:0) + a15(2+j)*Un(:,-1+j,-2:0,-2:0)
   end do
   do j=0,6
-     Dx(-2,-2:0,-2:0,:) = Dx(-2,-2:0,-2:0,:) + a06(1+j)*Un(-2+j,-2:0,-2:0,:)
+     Dx(:,-2,-2:0,-2:0) = Dx(:,-2,-2:0,-2:0) + a06(1+j)*Un(:,-2+j,-2:0,-2:0)
   end do
   !
   do j=-2,4
-     Dy(-2:0,0,:,:)  = Dy(-2:0,0,-2:0,:)  + a24(3+j)*Un(-2:0,0+j,-2:0,:) 
+     Dy(:,-2:0,0,:)  = Dy(:,-2:0,0,-2:0)  + a24(3+j)*Un(:,-2:0,0+j,-2:0) 
   end do
   do j=-1,5
-     Dy(-2:0,-1,:,:) = Dy(-2:0,-1,-2:0,:) + a15(2+j)*Un(-2:0,-1+j,-2:0,:) 
+     Dy(:,-2:0,-1,:) = Dy(:,-2:0,-1,-2:0) + a15(2+j)*Un(:,-2:0,-1+j,-2:0) 
   end do
   do j=0,6
-     Dy(-2:0,-2,:,:) = Dy(-2:0,-2,-2:0,:) + a06(1+j)*Un(-2:0,-2+j,-2:0,:)
+     Dy(:,-2:0,-2,:) = Dy(:,-2:0,-2,-2:0) + a06(1+j)*Un(:,-2:0,-2+j,-2:0)
   end do
   !
   do j=-2,4
-     Dz(-2:0,-2:0,0,:) =  Dz(-2:0,-2:0,0,:)   + a24(3+j)*Un(-2:0,-2:0,0+j,:)
+     Dz(:,-2:0,-2:0,0) =  Dz(:,-2:0,-2:0,0)   + a24(3+j)*Un(:,-2:0,-2:0,0+j)
   end do
   do j=-1,5
-     Dz(-2:0,-2:0,-1,:) = Dz(-2:0,-2:0,-1,:) + a15(2+j)*Un(-2:0,-2:0,-1+j,:)
+     Dz(:,-2:0,-2:0,-1) = Dz(:,-2:0,-2:0,-1) + a15(2+j)*Un(:,-2:0,-2:0,-1+j)
   end do
   do j=0,6
-     Dz(-2:0,-2:0,-2,:)  = Dz(-2:0,-2:0,-2,:) + a06(1+j)*Un(-2:0,-2:0,-2+j,:)
+     Dz(:,-2:0,-2:0,-2)  = Dz(:,-2:0,-2:0,-2) + a06(1+j)*Un(:,-2:0,-2:0,-2+j)
   end do
   !
   do z=-2,0
      do y=-2,0
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2739,11 +2741,11 @@ subroutine pts_c_bottomleftback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2776,41 +2778,41 @@ subroutine pts_c_bottomrightback(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,-2:0,-2:0,:) = Dx(nx+1,-2:0,-2:0,:) - a24(3-j)*Un(nx+1+j,-2:0,-2:0,:)
+     Dx(:,nx+1,-2:0,-2:0) = Dx(:,nx+1,-2:0,-2:0) - a24(3-j)*Un(:,nx+1+j,-2:0,-2:0)
   end do
   do j=-5,1
-     Dx(nx+2,-2:0,-2:0,:) = Dx(nx+2,-2:0,-2:0,:) - a15(2-j)*Un(nx+2+j,-2:0,-2:0,:)
+     Dx(:,nx+2,-2:0,-2:0) = Dx(:,nx+2,-2:0,-2:0) - a15(2-j)*Un(:,nx+2+j,-2:0,-2:0)
   end do
   do j=-6,0
-     Dx(nx+3,-2:0,-2:0,:) = Dx(nx+3,-2:0,-2:0,:) - a06(1-j)*Un(nx+3+j,-2:0,-2:0,:)
+     Dx(:,nx+3,-2:0,-2:0) = Dx(:,nx+3,-2:0,-2:0) - a06(1-j)*Un(:,nx+3+j,-2:0,-2:0)
   end do
   !
   do j=-2,4
-     Dy(nx+1:nx+3,0,-2:0,:)  = Dy(nx+1:nx+3,0,-2:0,:)  + a24(3+j)*Un(nx+1:nx+3,0+j,-2:0,:) 
+     Dy(:,nx+1:nx+3,0,-2:0)  = Dy(:,nx+1:nx+3,0,-2:0)  + a24(3+j)*Un(:,nx+1:nx+3,0+j,-2:0) 
   end do
   do j=-1,5
-     Dy(nx+1:nx+3,-1,-2:0,:) = Dy(nx+1:nx+3,-1,-2:0,:) + a15(2+j)*Un(nx+1:nx+3,-1+j,-2:0,:) 
+     Dy(:,nx+1:nx+3,-1,-2:0) = Dy(:,nx+1:nx+3,-1,-2:0) + a15(2+j)*Un(:,nx+1:nx+3,-1+j,-2:0) 
   end do
   do j=0,6
-     Dy(nx+1:nx+3,-2,-2:0,:) = Dy(nx+1:nx+3,-2,-2:0,:) + a06(1+j)*Un(nx+1:nx+3,-2+j,-2:0,:)
+     Dy(:,nx+1:nx+3,-2,-2:0) = Dy(:,nx+1:nx+3,-2,-2:0) + a06(1+j)*Un(:,nx+1:nx+3,-2+j,-2:0)
   end do
   !
   do j=-2,4
-     Dz(nx+1:nx+3,-2:0,0,:) =  Dz(nx+1:nx+3,-2:0,0,:)   + a24(3+j)*Un(nx+1:nx+3,-2:0,0+j,:)
+     Dz(:,nx+1:nx+3,-2:0,0) =  Dz(:,nx+1:nx+3,-2:0,0)   + a24(3+j)*Un(:,nx+1:nx+3,-2:0,0+j)
   end do
   do j=-1,5
-     Dz(nx+1:nx+3,-2:0,-1,:) = Dz(nx+1:nx+3,-2:0,-1,:) + a15(2+j)*Un(nx+1:nx+3,-2:0,-1+j,:)
+     Dz(:,nx+1:nx+3,-2:0,-1) = Dz(:,nx+1:nx+3,-2:0,-1) + a15(2+j)*Un(:,nx+1:nx+3,-2:0,-1+j)
   end do
   do j=0,6
-     Dz(nx+1:nx+3,-2:0,-2,:)  = Dz(nx+1:nx+3,-2:0,-2,:) + a06(1+j)*Un(nx+1:nx+3,-2:0,-2+j,:)
+     Dz(:,nx+1:nx+3,-2:0,-2)  = Dz(:,nx+1:nx+3,-2:0,-2) + a06(1+j)*Un(:,nx+1:nx+3,-2:0,-2+j)
   end do
   !
   do z=-2,0
      do y=-2,0
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2838,11 +2840,11 @@ subroutine pts_c_bottomrightback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2875,41 +2877,41 @@ subroutine pts_c_toprightback(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,ny+1:ny+3,-2:0,:) = Dx(nx+1,ny+1:ny+3,-2:0,:) - a24(3-j)*Un(nx+1+j,ny+1:ny+3,-2:0,:)
+     Dx(:,nx+1,ny+1:ny+3,-2:0) = Dx(:,nx+1,ny+1:ny+3,-2:0) - a24(3-j)*Un(:,nx+1+j,ny+1:ny+3,-2:0)
   end do
   do j=-5,1
-     Dx(nx+2,ny+1:ny+3,-2:0,:) = Dx(nx+2,ny+1:ny+3,-2:0,:) - a15(2-j)*Un(nx+2+j,ny+1:ny+3,-2:0,:)
+     Dx(:,nx+2,ny+1:ny+3,-2:0) = Dx(:,nx+2,ny+1:ny+3,-2:0) - a15(2-j)*Un(:,nx+2+j,ny+1:ny+3,-2:0)
   end do
   do j=-6,0
-     Dx(nx+3,ny+1:ny+3,-2:0,:) = Dx(nx+3,ny+1:ny+3,-2:0,:) - a06(1-j)*Un(nx+3+j,ny+1:ny+3,-2:0,:)
+     Dx(:,nx+3,ny+1:ny+3,-2:0) = Dx(:,nx+3,ny+1:ny+3,-2:0) - a06(1-j)*Un(:,nx+3+j,ny+1:ny+3,-2:0)
   end do
   !
   do j=-4,2
-     Dy(nx+1:nx+3,ny+1,:,:) = Dy(nx+1:nx+3,ny+1,-2:0,:) - a24(3-j)*Un(nx+1:nx+3,ny+1+j,-2:0,:) 
+     Dy(:,nx+1:nx+3,ny+1,:) = Dy(:,nx+1:nx+3,ny+1,-2:0) - a24(3-j)*Un(:,nx+1:nx+3,ny+1+j,-2:0) 
   end do
   do j=-5,1
-     Dy(nx+1:nx+3,ny+2,:,:) = Dy(nx+1:nx+3,ny+2,-2:0,:) - a15(2-j)*Un(nx+1:nx+3,ny+2+j,-2:0,:) 
+     Dy(:,nx+1:nx+3,ny+2,:) = Dy(:,nx+1:nx+3,ny+2,-2:0) - a15(2-j)*Un(:,nx+1:nx+3,ny+2+j,-2:0) 
   end do
   do j=-6,0
-     Dy(nx+1:nx+3,ny+3,:,:) = Dy(nx+1:nx+3,ny+3,-2:0,:) - a06(1-j)*Un(nx+1:nx+3,ny+3+j,-2:0,:) 
+     Dy(:,nx+1:nx+3,ny+3,:) = Dy(:,nx+1:nx+3,ny+3,-2:0) - a06(1-j)*Un(:,nx+1:nx+3,ny+3+j,-2:0) 
   end do
   !
   do j=-2,4
-     Dz(nx+1:nx+3,ny+1:ny+3,0,:) =  Dz(nx+1:nx+3,ny+1:ny+3,0,:)   + a24(3+j)*Un(nx+1:nx+3,ny+1:ny+3,0+j,:)
+     Dz(:,nx+1:nx+3,ny+1:ny+3,0) =  Dz(:,nx+1:nx+3,ny+1:ny+3,0)   + a24(3+j)*Un(:,nx+1:nx+3,ny+1:ny+3,0+j)
   end do
   do j=-1,5
-     Dz(nx+1:nx+3,ny+1:ny+3,-1,:) = Dz(nx+1:nx+3,ny+1:ny+3,-1,:) + a15(2+j)*Un(nx+1:nx+3,ny+1:ny+3,-1+j,:)
+     Dz(:,nx+1:nx+3,ny+1:ny+3,-1) = Dz(:,nx+1:nx+3,ny+1:ny+3,-1) + a15(2+j)*Un(:,nx+1:nx+3,ny+1:ny+3,-1+j)
   end do
   do j=0,6
-     Dz(nx+1:nx+3,ny+1:ny+3,-2,:)  = Dz(nx+1:nx+3,ny+1:ny+3,-2,:) + a06(1+j)*Un(nx+1:nx+3,ny+1:ny+3,-2+j,:)
+     Dz(:,nx+1:nx+3,ny+1:ny+3,-2)  = Dz(:,nx+1:nx+3,ny+1:ny+3,-2) + a06(1+j)*Un(:,nx+1:nx+3,ny+1:ny+3,-2+j)
   end do
   !
   do z=-2,0
      do y=ny+1,ny+3
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -2937,11 +2939,11 @@ subroutine pts_c_toprightback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -2974,41 +2976,41 @@ subroutine pts_c_topleftback(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,ny+1:ny+3,-2:0,:) = Dx(0,ny+1:ny+3,-2:0,:) +  a24(3+j)*Un(0+j,ny+1:ny+3,-2:0,:)
+     Dx(:,0,ny+1:ny+3,-2:0) = Dx(:,0,ny+1:ny+3,-2:0) +  a24(3+j)*Un(:,0+j,ny+1:ny+3,-2:0)
   end do
   do j=-1,5
-     Dx(-1,ny+1:ny+3,-2:0,:) = Dx(-1,ny+1:ny+3,-2:0,:) + a15(2+j)*Un(-1+j,ny+1:ny+3,-2:0,:)
+     Dx(:,-1,ny+1:ny+3,-2:0) = Dx(:,-1,ny+1:ny+3,-2:0) + a15(2+j)*Un(:,-1+j,ny+1:ny+3,-2:0)
   end do
   do j=0,6
-     Dx(-2,ny+1:ny+3,-2:0,:) = Dx(-2,ny+1:ny+3,-2:0,:) + a06(1+j)*Un(-2+j,ny+1:ny+3,-2:0,:)
+     Dx(:,-2,ny+1:ny+3,-2:0) = Dx(:,-2,ny+1:ny+3,-2:0) + a06(1+j)*Un(:,-2+j,ny+1:ny+3,-2:0)
   end do
   !
   do j=-4,2
-     Dy(-2:0,ny+1,:,:) = Dy(-2:0,ny+1,-2:0,:) - a24(3-j)*Un(-2:0,ny+1+j,-2:0,:) 
+     Dy(:,-2:0,ny+1,:) = Dy(:,-2:0,ny+1,-2:0) - a24(3-j)*Un(:,-2:0,ny+1+j,-2:0) 
   end do
   do j=-5,1
-     Dy(-2:0,ny+2,:,:) = Dy(-2:0,ny+2,-2:0,:) - a15(2-j)*Un(-2:0,ny+2+j,-2:0,:) 
+     Dy(:,-2:0,ny+2,:) = Dy(:,-2:0,ny+2,-2:0) - a15(2-j)*Un(:,-2:0,ny+2+j,-2:0) 
   end do
   do j=-6,0
-     Dy(-2:0,ny+3,:,:) = Dy(-2:0,ny+3,-2:0,:) - a06(1-j)*Un(-2:0,ny+3+j,-2:0,:) 
+     Dy(:,-2:0,ny+3,:) = Dy(:,-2:0,ny+3,-2:0) - a06(1-j)*Un(:,-2:0,ny+3+j,-2:0) 
   end do
   !
   do j=-2,4
-     Dz(-2:0,ny+1:ny+3,0,:) =  Dz(-2:0,ny+1:ny+3,0,:)   + a24(3+j)*Un(-2:0,ny+1:ny+3,0+j,:)
+     Dz(:,-2:0,ny+1:ny+3,0) =  Dz(:,-2:0,ny+1:ny+3,0)   + a24(3+j)*Un(:,-2:0,ny+1:ny+3,0+j)
   end do
   do j=-1,5
-     Dz(-2:0,ny+1:ny+3,-1,:) = Dz(-2:0,ny+1:ny+3,-1,:) + a15(2+j)*Un(-2:0,ny+1:ny+3,-1+j,:)
+     Dz(:,-2:0,ny+1:ny+3,-1) = Dz(:,-2:0,ny+1:ny+3,-1) + a15(2+j)*Un(:,-2:0,ny+1:ny+3,-1+j)
   end do
   do j=0,6
-     Dz(-2:0,ny+1:ny+3,-2,:)  = Dz(-2:0,ny+1:ny+3,-2,:) + a06(1+j)*Un(-2:0,ny+1:ny+3,-2+j,:)
+     Dz(:,-2:0,ny+1:ny+3,-2)  = Dz(:,-2:0,ny+1:ny+3,-2) + a06(1+j)*Un(:,-2:0,ny+1:ny+3,-2+j)
   end do
   !
   do z=-2,0
      do y=ny+1,ny+3
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -3036,11 +3038,11 @@ subroutine pts_c_topleftback(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -3073,41 +3075,41 @@ subroutine pts_c_bottomleftfront(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,-2:0,nz+1:nz+3,:) = Dx(0,-2:0,nz+1:nz+3,:) +  a24(3+j)*Un(0+j,-2:0,nz+1:nz+3,:)
+     Dx(:,0,-2:0,nz+1:nz+3) = Dx(:,0,-2:0,nz+1:nz+3) +  a24(3+j)*Un(:,0+j,-2:0,nz+1:nz+3)
   end do
   do j=-1,5
-     Dx(-1,-2:0,nz+1:nz+3,:) = Dx(-1,-2:0,nz+1:nz+3,:) + a15(2+j)*Un(-1+j,-2:0,nz+1:nz+3,:)
+     Dx(:,-1,-2:0,nz+1:nz+3) = Dx(:,-1,-2:0,nz+1:nz+3) + a15(2+j)*Un(:,-1+j,-2:0,nz+1:nz+3)
   end do
   do j=0,6
-     Dx(-2,-2:0,nz+1:nz+3,:) = Dx(-2,-2:0,nz+1:nz+3,:) + a06(1+j)*Un(-2+j,-2:0,nz+1:nz+3,:)
+     Dx(:,-2,-2:0,nz+1:nz+3) = Dx(:,-2,-2:0,nz+1:nz+3) + a06(1+j)*Un(:,-2+j,-2:0,nz+1:nz+3)
   end do
   !
   do j=-2,4
-     Dy(-2:0,0,nz+1:nz+3,:)  = Dy(-2:0,0,nz+1:nz+3,:)  + a24(3+j)*Un(-2:0,0+j,nz+1:nz+3,:) 
+     Dy(:,-2:0,0,nz+1:nz+3)  = Dy(:,-2:0,0,nz+1:nz+3)  + a24(3+j)*Un(:,-2:0,0+j,nz+1:nz+3) 
   end do
   do j=-1,5
-     Dy(-2:0,-1,nz+1:nz+3,:) = Dy(-2:0,-1,nz+1:nz+3,:) + a15(2+j)*Un(-2:0,-1+j,nz+1:nz+3,:) 
+     Dy(:,-2:0,-1,nz+1:nz+3) = Dy(:,-2:0,-1,nz+1:nz+3) + a15(2+j)*Un(:,-2:0,-1+j,nz+1:nz+3) 
   end do
   do j=0,6
-     Dy(-2:0,-2,nz+1:nz+3,:) = Dy(-2:0,-2,nz+1:nz+3,:) + a06(1+j)*Un(-2:0,-2+j,nz+1:nz+3,:)
+     Dy(:,-2:0,-2,nz+1:nz+3) = Dy(:,-2:0,-2,nz+1:nz+3) + a06(1+j)*Un(:,-2:0,-2+j,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dz(-2:0,-2:0,nz+1,:) = Dz(-2:0,-2:0,nz+1,:) - a24(3-j)*Un(-2:0,-2:0,nz+1+j,:) 
+     Dz(:,-2:0,-2:0,nz+1) = Dz(:,-2:0,-2:0,nz+1) - a24(3-j)*Un(:,-2:0,-2:0,nz+1+j) 
   end do
   do j=-5,1
-     Dz(-2:0,-2:0,nz+2,:) = Dz(-2:0,-2:0,nz+2,:) - a15(2-j)*Un(-2:0,-2:0,nz+2+j,:) 
+     Dz(:,-2:0,-2:0,nz+2) = Dz(:,-2:0,-2:0,nz+2) - a15(2-j)*Un(:,-2:0,-2:0,nz+2+j) 
   end do
   do j=-6,0
-     Dz(-2:0,-2:0,nz+3,:) = Dz(-2:0,-2:0,nz+3,:) - a06(1-j)*Un(-2:0,-2:0,nz+3+j,:) 
+     Dz(:,-2:0,-2:0,nz+3) = Dz(:,-2:0,-2:0,nz+3) - a06(1-j)*Un(:,-2:0,-2:0,nz+3+j) 
   end do
   !
   do y=-2,0
      do z=nz+1,nz+3
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -3135,11 +3137,11 @@ subroutine pts_c_bottomleftfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -3172,41 +3174,41 @@ subroutine pts_c_bottomrightfront(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,-2:0,nz+1:nz+3,:) = Dx(nx+1,-2:0,nz+1:nz+3,:) - a24(3-j)*Un(nx+1+j,-2:0,nz+1:nz+3,:)
+     Dx(:,nx+1,-2:0,nz+1:nz+3) = Dx(:,nx+1,-2:0,nz+1:nz+3) - a24(3-j)*Un(:,nx+1+j,-2:0,nz+1:nz+3)
   end do
   do j=-5,1
-     Dx(nx+2,-2:0,nz+1:nz+3,:) = Dx(nx+2,-2:0,nz+1:nz+3,:) - a15(2-j)*Un(nx+2+j,-2:0,nz+1:nz+3,:)
+     Dx(:,nx+2,-2:0,nz+1:nz+3) = Dx(:,nx+2,-2:0,nz+1:nz+3) - a15(2-j)*Un(:,nx+2+j,-2:0,nz+1:nz+3)
   end do
   do j=-6,0
-     Dx(nx+3,-2:0,nz+1:nz+3,:) = Dx(nx+3,-2:0,nz+1:nz+3,:) - a06(1-j)*Un(nx+3+j,-2:0,nz+1:nz+3,:)
+     Dx(:,nx+3,-2:0,nz+1:nz+3) = Dx(:,nx+3,-2:0,nz+1:nz+3) - a06(1-j)*Un(:,nx+3+j,-2:0,nz+1:nz+3)
   end do
   !
   do j=-2,4
-     Dy(nx+1:nx+3,0,nz+1:nz+3,:)  = Dy(nx+1:nx+3,0,nz+1:nz+3,:)  + a24(3+j)*Un(nx+1:nx+3,0+j,nz+1:nz+3,:) 
+     Dy(:,nx+1:nx+3,0,nz+1:nz+3)  = Dy(:,nx+1:nx+3,0,nz+1:nz+3)  + a24(3+j)*Un(:,nx+1:nx+3,0+j,nz+1:nz+3) 
   end do
   do j=-1,5
-     Dy(nx+1:nx+3,-1,nz+1:nz+3,:) = Dy(nx+1:nx+3,-1,nz+1:nz+3,:) + a15(2+j)*Un(nx+1:nx+3,-1+j,nz+1:nz+3,:) 
+     Dy(:,nx+1:nx+3,-1,nz+1:nz+3) = Dy(:,nx+1:nx+3,-1,nz+1:nz+3) + a15(2+j)*Un(:,nx+1:nx+3,-1+j,nz+1:nz+3) 
   end do
   do j=0,6
-     Dy(nx+1:nx+3,-2,nz+1:nz+3,:) = Dy(nx+1:nx+3,-2,nz+1:nz+3,:) + a06(1+j)*Un(nx+1:nx+3,-2+j,nz+1:nz+3,:)
+     Dy(:,nx+1:nx+3,-2,nz+1:nz+3) = Dy(:,nx+1:nx+3,-2,nz+1:nz+3) + a06(1+j)*Un(:,nx+1:nx+3,-2+j,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dz(nx+1:nx+3,-2:0,nz+1,:) = Dz(nx+1:nx+3,-2:0,nz+1,:) - a24(3-j)*Un(nx+1:nx+3,-2:0,nz+1+j,:) 
+     Dz(:,nx+1:nx+3,-2:0,nz+1) = Dz(:,nx+1:nx+3,-2:0,nz+1) - a24(3-j)*Un(:,nx+1:nx+3,-2:0,nz+1+j) 
   end do
   do j=-5,1
-     Dz(nx+1:nx+3,-2:0,nz+2,:) = Dz(nx+1:nx+3,-2:0,nz+2,:) - a15(2-j)*Un(nx+1:nx+3,-2:0,nz+2+j,:) 
+     Dz(:,nx+1:nx+3,-2:0,nz+2) = Dz(:,nx+1:nx+3,-2:0,nz+2) - a15(2-j)*Un(:,nx+1:nx+3,-2:0,nz+2+j) 
   end do
   do j=-6,0
-     Dz(nx+1:nx+3,-2:0,nz+3,:) = Dz(nx+1:nx+3,-2:0,nz+3,:) - a06(1-j)*Un(nx+1:nx+3,-2:0,nz+3+j,:) 
+     Dz(:,nx+1:nx+3,-2:0,nz+3) = Dz(:,nx+1:nx+3,-2:0,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,-2:0,nz+3+j) 
   end do
   !
   do z=nz+1,nz+3
      do y=-2,0
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -3234,11 +3236,11 @@ subroutine pts_c_bottomrightfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -3271,41 +3273,41 @@ subroutine pts_c_toprightfront(irk)
   Dz=0.
   !
   do j=-4,2
-     Dx(nx+1,ny+1:ny+3,nz+1:nz+3,:) = Dx(nx+1,ny+1:ny+3,nz+1:nz+3,:) - a24(3-j)*Un(nx+1+j,ny+1:ny+3,nz+1:nz+3,:)
+     Dx(:,nx+1,ny+1:ny+3,nz+1:nz+3) = Dx(:,nx+1,ny+1:ny+3,nz+1:nz+3) - a24(3-j)*Un(:,nx+1+j,ny+1:ny+3,nz+1:nz+3)
   end do
   do j=-5,1
-     Dx(nx+2,ny+1:ny+3,nz+1:nz+3,:) = Dx(nx+2,ny+1:ny+3,nz+1:nz+3,:) - a15(2-j)*Un(nx+2+j,ny+1:ny+3,nz+1:nz+3,:)
+     Dx(:,nx+2,ny+1:ny+3,nz+1:nz+3) = Dx(:,nx+2,ny+1:ny+3,nz+1:nz+3) - a15(2-j)*Un(:,nx+2+j,ny+1:ny+3,nz+1:nz+3)
   end do
   do j=-6,0
-     Dx(nx+3,ny+1:ny+3,nz+1:nz+3,:) = Dx(nx+3,ny+1:ny+3,nz+1:nz+3,:) - a06(1-j)*Un(nx+3+j,ny+1:ny+3,nz+1:nz+3,:)
+     Dx(:,nx+3,ny+1:ny+3,nz+1:nz+3) = Dx(:,nx+3,ny+1:ny+3,nz+1:nz+3) - a06(1-j)*Un(:,nx+3+j,ny+1:ny+3,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dy(nx+1:nx+3,ny+1,:,:) = Dy(nx+1:nx+3,ny+1,nz+1:nz+3,:) - a24(3-j)*Un(nx+1:nx+3,ny+1+j,nz+1:nz+3,:) 
+     Dy(:,nx+1:nx+3,ny+1,:) = Dy(:,nx+1:nx+3,ny+1,nz+1:nz+3) - a24(3-j)*Un(:,nx+1:nx+3,ny+1+j,nz+1:nz+3) 
   end do
   do j=-5,1
-     Dy(nx+1:nx+3,ny+2,:,:) = Dy(nx+1:nx+3,ny+2,nz+1:nz+3,:) - a15(2-j)*Un(nx+1:nx+3,ny+2+j,nz+1:nz+3,:) 
+     Dy(:,nx+1:nx+3,ny+2,:) = Dy(:,nx+1:nx+3,ny+2,nz+1:nz+3) - a15(2-j)*Un(:,nx+1:nx+3,ny+2+j,nz+1:nz+3) 
   end do
   do j=-6,0
-     Dy(nx+1:nx+3,ny+3,:,:) = Dy(nx+1:nx+3,ny+3,nz+1:nz+3,:) - a06(1-j)*Un(nx+1:nx+3,ny+3+j,nz+1:nz+3,:) 
+     Dy(:,nx+1:nx+3,ny+3,:) = Dy(:,nx+1:nx+3,ny+3,nz+1:nz+3) - a06(1-j)*Un(:,nx+1:nx+3,ny+3+j,nz+1:nz+3) 
   end do
   !
   do j=-4,2
-     Dz(nx+1:nx+3,ny+1:ny+3,nz+1,:) = Dz(nx+1:nx+3,ny+1:ny+3,nz+1,:) - a24(3-j)*Un(nx+1:nx+3,ny+1:ny+3,nz+1+j,:) 
+     Dz(:,nx+1:nx+3,ny+1:ny+3,nz+1) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+1) - a24(3-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+1+j) 
   end do
   do j=-5,1
-     Dz(nx+1:nx+3,ny+1:ny+3,nz+2,:) = Dz(nx+1:nx+3,ny+1:ny+3,nz+2,:) - a15(2-j)*Un(nx+1:nx+3,ny+1:ny+3,nz+2+j,:) 
+     Dz(:,nx+1:nx+3,ny+1:ny+3,nz+2) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+2) - a15(2-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+2+j) 
   end do
   do j=-6,0
-     Dz(nx+1:nx+3,ny+1:ny+3,nz+3,:) = Dz(nx+1:nx+3,ny+1:ny+3,nz+3,:) - a06(1-j)*Un(nx+1:nx+3,ny+1:ny+3,nz+3+j,:) 
+     Dz(:,nx+1:nx+3,ny+1:ny+3,nz+3) = Dz(:,nx+1:nx+3,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,nx+1:nx+3,ny+1:ny+3,nz+3+j) 
   end do
   !
   do z=nz+1,nz+3
      do y=ny+1,ny+3
         do x=nx+1,nx+3
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -3333,11 +3335,11 @@ subroutine pts_c_toprightfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -3370,41 +3372,41 @@ subroutine pts_c_topleftfront(irk)
   Dz=0.
   !
   do j=-2,4
-     Dx(0,ny+1:ny+3,nz+1:nz+3,:) = Dx(0,ny+1:ny+3,nz+1:nz+3,:) + a24(3+j)*Un(0+j,ny+1:ny+3,nz+1:nz+3,:)
+     Dx(:,0,ny+1:ny+3,nz+1:nz+3) = Dx(:,0,ny+1:ny+3,nz+1:nz+3) + a24(3+j)*Un(:,0+j,ny+1:ny+3,nz+1:nz+3)
   end do
   do j=-1,5
-     Dx(-1,ny+1:ny+3,nz+1:nz+3,:) = Dx(-1,ny+1:ny+3,nz+1:nz+3,:) + a15(2+j)*Un(-1+j,ny+1:ny+3,nz+1:nz+3,:)
+     Dx(:,-1,ny+1:ny+3,nz+1:nz+3) = Dx(:,-1,ny+1:ny+3,nz+1:nz+3) + a15(2+j)*Un(:,-1+j,ny+1:ny+3,nz+1:nz+3)
   end do
   do j=0,6
-     Dx(-2,ny+1:ny+3,nz+1:nz+3,:) = Dx(-2,ny+1:ny+3,nz+1:nz+3,:) + a06(1+j)*Un(-2+j,ny+1:ny+3,nz+1:nz+3,:)
+     Dx(:,-2,ny+1:ny+3,nz+1:nz+3) = Dx(:,-2,ny+1:ny+3,nz+1:nz+3) + a06(1+j)*Un(:,-2+j,ny+1:ny+3,nz+1:nz+3)
   end do
   !
   do j=-4,2
-     Dy(-2:0,ny+1,:,:) = Dy(-2:0,ny+1,nz+1:nz+3,:) - a24(3-j)*Un(-2:0,ny+1+j,nz+1:nz+3,:) 
+     Dy(:,-2:0,ny+1,:) = Dy(:,-2:0,ny+1,nz+1:nz+3) - a24(3-j)*Un(:,-2:0,ny+1+j,nz+1:nz+3) 
   end do
   do j=-5,1
-     Dy(-2:0,ny+2,:,:) = Dy(-2:0,ny+2,nz+1:nz+3,:) - a15(2-j)*Un(-2:0,ny+2+j,nz+1:nz+3,:) 
+     Dy(:,-2:0,ny+2,:) = Dy(:,-2:0,ny+2,nz+1:nz+3) - a15(2-j)*Un(:,-2:0,ny+2+j,nz+1:nz+3) 
   end do
   do j=-6,0
-     Dy(-2:0,ny+3,:,:) = Dy(-2:0,ny+3,nz+1:nz+3,:) - a06(1-j)*Un(-2:0,ny+3+j,nz+1:nz+3,:) 
+     Dy(:,-2:0,ny+3,:) = Dy(:,-2:0,ny+3,nz+1:nz+3) - a06(1-j)*Un(:,-2:0,ny+3+j,nz+1:nz+3) 
   end do
   !
   do j=-4,2
-     Dz(-2:0,ny+1:ny+3,nz+1,:) = Dz(-2:0,ny+1:ny+3,nz+1,:) - a24(3-j)*Un(-2:0,ny+1:ny+3,nz+1+j,:) 
+     Dz(:,-2:0,ny+1:ny+3,nz+1) = Dz(:,-2:0,ny+1:ny+3,nz+1) - a24(3-j)*Un(:,-2:0,ny+1:ny+3,nz+1+j) 
   end do
   do j=-5,1
-     Dz(-2:0,ny+1:ny+3,nz+2,:) = Dz(-2:0,ny+1:ny+3,nz+2,:) - a15(2-j)*Un(-2:0,ny+1:ny+3,nz+2+j,:) 
+     Dz(:,-2:0,ny+1:ny+3,nz+2) = Dz(:,-2:0,ny+1:ny+3,nz+2) - a15(2-j)*Un(:,-2:0,ny+1:ny+3,nz+2+j) 
   end do
   do j=-6,0
-     Dz(-2:0,ny+1:ny+3,nz+3,:) = Dz(-2:0,ny+1:ny+3,nz+3,:) - a06(1-j)*Un(-2:0,ny+1:ny+3,nz+3+j,:) 
+     Dz(:,-2:0,ny+1:ny+3,nz+3) = Dz(:,-2:0,ny+1:ny+3,nz+3) - a06(1-j)*Un(:,-2:0,ny+1:ny+3,nz+3+j) 
   end do
   !
   do z=nz+1,nz+3
      do y=ny+1,ny+3
         do x=-2,0
-           Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-           Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-           Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+           Dx(:,x,y,z) = Dx(:,x,y,z) * dxg(x)
+           Dy(:,x,y,z) = Dy(:,x,y,z) * dyg(y)
+           Dz(:,x,y,z) = Dz(:,x,y,z) * dzg(z)
            !
            xc = xg(x) - xg(nxray)
            yc = yg(y) - yg(nyray)
@@ -3432,11 +3434,11 @@ subroutine pts_c_topleftfront(irk)
            vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
            !
            do i=1,5
-              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(i,x,y,z) + yc*Dy(i,x,y,z) + zc*Dz(i,x,y,z) + Un(i,x,y,z)/r)
            end do
            !
            do i=1,5          
-              Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+              Ut(i,x,y,z) = U(i,x,y,z) - DD(i)*deltat*rk(irk)
            end do
            !
         end do
@@ -3470,12 +3472,12 @@ subroutine filtrage8x
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
            do x=xfmin_x,xfmax_x
-              Un(x,y,z,i) = Ut(x,y,z,i) - cfx*                &
-                   ( dfilt8(4)*(Ut(x+4,y,z,i)+Ut(x-4,y,z,i))  &
-                    +dfilt8(3)*(Ut(x+3,y,z,i)+Ut(x-3,y,z,i))  &
-                    +dfilt8(2)*(Ut(x+2,y,z,i)+Ut(x-2,y,z,i))  &
-                    +dfilt8(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                    +dfilt8(0)*Ut(x,y,z,i) )
+              Un(i,x,y,z) = Ut(i,x,y,z) - cfx*                &
+                   ( dfilt8(4)*(Ut(i,x+4,y,z)+Ut(i,x-4,y,z))  &
+                    +dfilt8(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
+                    +dfilt8(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                    +dfilt8(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                    +dfilt8(0)*Ut(i,x,y,z) )
            end do
         end do
      end do
@@ -3509,12 +3511,12 @@ subroutine filtrage8y
      do z=zfmin_y,zfmax_y
         do y=yfmin_y,yfmax_y
            do x=xfmin_y,xfmax_y
-              Un(x,y,z,i) = Ut(x,y,z,i) - cfy*                &
-                   ( dfilt8(4)*(Ut(x,y+4,z,i)+Ut(x,y-4,z,i))  &
-                    +dfilt8(3)*(Ut(x,y+3,z,i)+Ut(x,y-3,z,i))  &
-                    +dfilt8(2)*(Ut(x,y+2,z,i)+Ut(x,y-2,z,i))  &
-                    +dfilt8(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                    +dfilt8(0)*Ut(x,y,z,i) )
+              Un(i,x,y,z) = Ut(i,x,y,z) - cfy*                &
+                   ( dfilt8(4)*(Ut(i,x,y+4,z)+Ut(i,x,y-4,z))  &
+                    +dfilt8(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
+                    +dfilt8(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                    +dfilt8(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                    +dfilt8(0)*Ut(i,x,y,z) )
            end do
         end do
      end do
@@ -3548,12 +3550,12 @@ subroutine filtrage8z
      do z=zfmin_z,zfmax_z
         do y=yfmin_z,yfmax_z
            do x=xfmin_z,xfmax_z
-              Un(x,y,z,i) = Ut(x,y,z,i) - cfz*                &
-                   ( dfilt8(4)*(Ut(x,y,z+4,i)+Ut(x,y,z-4,i))  &
-                    +dfilt8(3)*(Ut(x,y,z+3,i)+Ut(x,y,z-3,i))  &
-                    +dfilt8(2)*(Ut(x,y,z+2,i)+Ut(x,y,z-2,i))  &
-                    +dfilt8(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                    +dfilt8(0)*Ut(x,y,z,i) )
+              Un(i,x,y,z) = Ut(i,x,y,z) - cfz*                &
+                   ( dfilt8(4)*(Ut(i,x,y,z+4)+Ut(i,x,y,z-4))  &
+                    +dfilt8(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
+                    +dfilt8(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                    +dfilt8(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                    +dfilt8(0)*Ut(i,x,y,z) )
            end do
         end do
      end do
@@ -3587,11 +3589,11 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx6*               &
-                ( dfilt6(3)*(Ut(x+3,y,z,i)+Ut(x-3,y,z,i))  &
-                 +dfilt6(2)*(Ut(x+2,y,z,i)+Ut(x-2,y,z,i))  &
-                 +dfilt6(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                 +dfilt6(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*               &
+                ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
+                 +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                 +dfilt6(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                 +dfilt6(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3600,10 +3602,10 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx4*               &
-                ( dfilt4(2)*(Ut(x+2,y,z,i)+Ut(x-2,y,z,i))  &
-                 +dfilt4(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                 +dfilt4(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*               &
+                ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                 +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                 +dfilt4(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3612,9 +3614,9 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx2*               &
-                ( dfilt2(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                 +dfilt2(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*               &
+                ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                 +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3623,7 +3625,7 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx1*0.5*(Ut(x,y,z,i)-Ut(x-1,y,z,i))
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x-1,y,z))
         end do
      end do
   end do
@@ -3636,11 +3638,11 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx6*               &
-                ( dfilt6(3)*(Ut(x+3,y,z,i)+Ut(x-3,y,z,i))  &
-                 +dfilt6(2)*(Ut(x+2,y,z,i)+Ut(x-2,y,z,i))  &
-                 +dfilt6(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                 +dfilt6(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*               &
+                ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
+                 +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                 +dfilt6(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                 +dfilt6(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3649,10 +3651,10 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx4*               &
-                ( dfilt4(2)*(Ut(x+2,y,z,i)+Ut(x-2,y,z,i))  &
-                 +dfilt4(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                 +dfilt4(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*               &
+                ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                 +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                 +dfilt4(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3661,9 +3663,9 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx2*               &
-                ( dfilt2(1)*(Ut(x+1,y,z,i)+Ut(x-1,y,z,i))  &
-                 +dfilt2(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*               &
+                ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                 +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3673,7 +3675,7 @@ subroutine filtragex_sup
   do i=1,5
      do z=zfmin_x,zfmax_x
         do y=yfmin_x,yfmax_x
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfx1*0.5*(Ut(x,y,z,i)-Ut(x+1,y,z,i))
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x+1,y,z))
         end do
      end do
   end do
@@ -3706,11 +3708,11 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy6*               &
-                ( dfilt6(3)*(Ut(x,y+3,z,i)+Ut(x,y-3,z,i))  &
-                 +dfilt6(2)*(Ut(x,y+2,z,i)+Ut(x,y-2,z,i))  &
-                 +dfilt6(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                +dfilt6(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*               &
+                ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
+                 +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                 +dfilt6(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                +dfilt6(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3719,10 +3721,10 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy4*               &
-                ( dfilt4(2)*(Ut(x,y+2,z,i)+Ut(x,y-2,z,i))  &
-                 +dfilt4(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                 +dfilt4(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*               &
+                ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                 +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                 +dfilt4(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3731,9 +3733,9 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy2*               &
-                ( dfilt2(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                 +dfilt2(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*               &
+                ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                 +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3742,7 +3744,7 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy1*0.5*(Ut(x,y,z,i)-Ut(x,y-1,z,i))
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y-1,z))
         end do
      end do
   end do
@@ -3755,11 +3757,11 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy6*               &
-                ( dfilt6(3)*(Ut(x,y+3,z,i)+Ut(x,y-3,z,i))  &
-                 +dfilt6(2)*(Ut(x,y+2,z,i)+Ut(x,y-2,z,i))  &
-                 +dfilt6(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                 +dfilt6(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*               &
+                ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
+                 +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                 +dfilt6(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                 +dfilt6(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3768,10 +3770,10 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy4*               &
-                ( dfilt4(2)*(Ut(x,y+2,z,i)+Ut(x,y-2,z,i))  &
-                 +dfilt4(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                 +dfilt4(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*               &
+                ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                 +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                 +dfilt4(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3780,9 +3782,9 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy2*               &
-                ( dfilt2(1)*(Ut(x,y+1,z,i)+Ut(x,y-1,z,i))  &
-                 +dfilt2(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*               &
+                ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                 +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3791,7 +3793,7 @@ subroutine filtragey_sup
   do i=1,5
      do z=zfmin_y,zfmax_y
         do x=xfmin_y,xfmax_y
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfy1*0.5*(Ut(x,y,z,i)-Ut(x,y+1,z,i))
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y+1,z))
         end do
      end do
   end do
@@ -3824,11 +3826,11 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz6*               &
-                ( dfilt6(3)*(Ut(x,y,z+3,i)+Ut(x,y,z-3,i))  &
-                 +dfilt6(2)*(Ut(x,y,z+2,i)+Ut(x,y,z-2,i))  &
-                 +dfilt6(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                 +dfilt6(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*               &
+                ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
+                 +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                 +dfilt6(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                 +dfilt6(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3837,10 +3839,10 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz4*               &
-                ( dfilt4(2)*(Ut(x,y,z+2,i)+Ut(x,y,z-2,i))  &
-                 +dfilt4(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                 +dfilt4(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*               &
+                ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                 +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                 +dfilt4(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3849,9 +3851,9 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz2*               &
-                ( dfilt2(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                 +dfilt2(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*               &
+                ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                 +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3860,7 +3862,7 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz1*0.5*(Ut(x,y,z,i)-Ut(x,y,z-1,i))
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z-1))
         end do
      end do
   end do
@@ -3872,11 +3874,11 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz6*               &
-                ( dfilt6(3)*(Ut(x,y,z+3,i)+Ut(x,y,z-3,i))  &
-                 +dfilt6(2)*(Ut(x,y,z+2,i)+Ut(x,y,z-2,i))  &
-                 +dfilt6(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                 +dfilt6(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*               &
+                ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
+                 +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                 +dfilt6(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                 +dfilt6(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3885,10 +3887,10 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz4*               &
-                ( dfilt4(2)*(Ut(x,y,z+2,i)+Ut(x,y,z-2,i))  &
-                 +dfilt4(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                 +dfilt4(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*               &
+                ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                 +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                 +dfilt4(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3897,9 +3899,9 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz2*               &
-                ( dfilt2(1)*(Ut(x,y,z+1,i)+Ut(x,y,z-1,i))  &
-                 +dfilt2(0)*Ut(x,y,z,i) )
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*               &
+                ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                 +dfilt2(0)*Ut(i,x,y,z) )
         end do
      end do
   end do
@@ -3908,7 +3910,7 @@ subroutine filtragez_sup
   do i=1,5
      do y=yfmin_z,yfmax_z
         do x=xfmin_z,xfmax_z
-           Un(x,y,z,i) = Ut(x,y,z,i) - cfz1*0.5*(Ut(x,y,z,i)-Ut(x,y,z+1,i))
+           Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z+1))
         end do
      end do
   end do
@@ -3930,44 +3932,54 @@ subroutine fluxes
   use mod_options
   use mod_vectors
   implicit none
+  integer :: x,y,z
   !
   !
+!$OMP PARALLEL DO DEFAULT(NONE) &
+!$OMP SHARED(E,F,G,H,uo,Un,gamma,po,rhoo,vo,wo,duox,duoy,duoz) &
+!$OMP SHARED(dvox,dvoy,dvoz,dwox,dwoy,dwoz,dpox,dpoy,dpoz,nx,ny,nz) &
+!$OMP PRIVATE(x,y,z)
+  do z=-2,nz+3
+     do y=-2,ny+3
+        do x=-2,nx+3
+  E(1,x,y,z) = uo(x,y,z)*Un(1,x,y,z)+Un(2,x,y,z)
+  E(2,x,y,z) = uo(x,y,z)*Un(2,x,y,z)+Un(5,x,y,z)
+  E(3,x,y,z) = uo(x,y,z)*Un(3,x,y,z)
+  E(4,x,y,z) = uo(x,y,z)*Un(4,x,y,z)
+  E(5,x,y,z) = uo(x,y,z)*Un(5,x,y,z) + gamma*po(x,y,z)*rhoo(x,y,z)*Un(2,x,y,z)
+  !
+  F(1,x,y,z) = vo(x,y,z)*Un(1,x,y,z)+Un(3,x,y,z)
+  F(2,x,y,z) = vo(x,y,z)*Un(2,x,y,z)
+  F(3,x,y,z) = vo(x,y,z)*Un(3,x,y,z)+Un(5,x,y,z)
+  F(4,x,y,z) = vo(x,y,z)*Un(4,x,y,z)
+  F(5,x,y,z) = vo(x,y,z)*Un(5,x,y,z) + gamma*po(x,y,z)*rhoo(x,y,z)*Un(3,x,y,z)
 
-  E(:,:,:,1) = uo(:,:,:)*Un(:,:,:,1)+Un(:,:,:,2)
-  E(:,:,:,2) = uo(:,:,:)*Un(:,:,:,2)+Un(:,:,:,5)
-  E(:,:,:,3) = uo(:,:,:)*Un(:,:,:,3)
-  E(:,:,:,4) = uo(:,:,:)*Un(:,:,:,4)
-  E(:,:,:,5) = uo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)*rhoo(:,:,:)*Un(:,:,:,2)
+  G(1,x,y,z) = wo(x,y,z)*Un(1,x,y,z)+Un(4,x,y,z)
+  G(2,x,y,z) = wo(x,y,z)*Un(2,x,y,z)
+  G(3,x,y,z) = wo(x,y,z)*Un(3,x,y,z)
+  G(4,x,y,z) = wo(x,y,z)*Un(4,x,y,z)+Un(5,x,y,z)
+  G(5,x,y,z) = wo(x,y,z)*Un(5,x,y,z) + gamma*po(x,y,z)*rhoo(x,y,z)*Un(4,x,y,z)
   !
-  F(:,:,:,1) = vo(:,:,:)*Un(:,:,:,1)+Un(:,:,:,3)
-  F(:,:,:,2) = vo(:,:,:)*Un(:,:,:,2)
-  F(:,:,:,3) = vo(:,:,:)*Un(:,:,:,3)+Un(:,:,:,5)
-  F(:,:,:,4) = vo(:,:,:)*Un(:,:,:,4)
-  F(:,:,:,5) = vo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)*rhoo(:,:,:)*Un(:,:,:,3)
+  H(1,x,y,z) = 0.
+  H(2,x,y,z) = duox(x,y,z) * E(1,x,y,z)      &
+             + duoy(x,y,z) * F(1,x,y,z)      &
+             + duoz(x,y,z) * G(1,x,y,z)
+  H(3,x,y,z) = dvox(x,y,z) * E(1,x,y,z)      &
+             + dvoy(x,y,z) * F(1,x,y,z)      &
+             + dvoz(x,y,z) * G(1,x,y,z)
+  H(4,x,y,z) = dwox(x,y,z) * E(1,x,y,z)      &
+             + dwoy(x,y,z) * F(1,x,y,z)      &
+             + dwoz(x,y,z) * G(1,x,y,z)
 
-  G(:,:,:,1) = wo(:,:,:)*Un(:,:,:,1)+Un(:,:,:,4)
-  G(:,:,:,2) = wo(:,:,:)*Un(:,:,:,2)
-  G(:,:,:,3) = wo(:,:,:)*Un(:,:,:,3)
-  G(:,:,:,4) = wo(:,:,:)*Un(:,:,:,4)+Un(:,:,:,5)
-  G(:,:,:,5) = wo(:,:,:)*Un(:,:,:,5) + gamma*po(:,:,:)*rhoo(:,:,:)*Un(:,:,:,4)
-  !
-  H(:,:,:,1) = 0.
-  H(:,:,:,2) = duox(:,:,:) * E(:,:,:,1)      &
-             + duoy(:,:,:) * F(:,:,:,1)      &
-             + duoz(:,:,:) * G(:,:,:,1)
-  H(:,:,:,3) = dvox(:,:,:) * E(:,:,:,1)      &
-             + dvoy(:,:,:) * F(:,:,:,1)      &
-             + dvoz(:,:,:) * G(:,:,:,1)
-  H(:,:,:,4) = dwox(:,:,:) * E(:,:,:,1)      &
-             + dwoy(:,:,:) * F(:,:,:,1)      &
-             + dwoz(:,:,:) * G(:,:,:,1)
+  H(5,x,y,z) = (gamma-1.) * ( (duox(x,y,z)+dvoy(x,y,z)+dwoz(x,y,z))*Un(5,x,y,z)       &
+                             -(dpox(x,y,z)*Un(2,x,y,z)                    &
+                             + dpoy(x,y,z)*Un(3,x,y,z)                    &
+                             + dpoz(x,y,z)*Un(4,x,y,z))*rhoo(x,y,z) )
 
-  H(:,:,:,5) = (gamma-1.) * ( (duox(:,:,:)+dvoy(:,:,:)+dwoz(:,:,:))*Un(:,:,:,5)       &
-                             - dpox(:,:,:)*rhoo(:,:,:)*Un(:,:,:,2)                    &
-                             - dpoy(:,:,:)*rhoo(:,:,:)*Un(:,:,:,3)                    &
-                             - dpoz(:,:,:)*rhoo(:,:,:)*Un(:,:,:,4) )
-  !
-  !
+enddo
+enddo
+enddo
+!$OMP END PARALLEL DO
 end subroutine fluxes
 !******************************************************************
 !
@@ -3996,9 +4008,9 @@ subroutine ts(irk)
      do z=-2,nz+3
         do y=-2,ny+3
            do x=-2,nx+3   
-              S(x,y,z,1) = amp * sin(omega*(time+ck(irk)*deltat)) &
+              S(1,x,y,z) = amp * sin(omega*(time+ck(irk)*deltat)) &
                                * exp(-alpha*(xg(x)**2 + yg(y)**2 + zg(z)**2))                
-              S(x,y,z,5) = S(x,y,z,1)
+              S(5,x,y,z) = S(1,x,y,z)
            end do
         end do
      end do
@@ -4275,15 +4287,15 @@ subroutine record(itime)
      write(501) record_dummy
      write(501) itime
      write(501) record_dummy
-     write(501) (((Un(x,y,z,1),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(501) (((Un(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) record_dummy
-     write(501) (((Un(x,y,z,2),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(501) (((Un(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) record_dummy
-     write(501) (((Un(x,y,z,3),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(501) (((Un(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) record_dummy
-     write(501) (((Un(x,y,z,4),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(501) (((Un(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) record_dummy
-     write(501) (((Un(x,y,z,5),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     write(501) (((Un(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
      write(501) record_dummy       
      close(501)
      !
@@ -4297,7 +4309,7 @@ subroutine record(itime)
         write(501) record_dummy
         write(501) itime
         write(501) record_dummy
-        write(501) ((((VORT(x,y,z,i),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3),i=1,3)
+        write(501) ((((VORT(i,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3),i=1,3)
         write(501) record_dummy
         close(501)
      end if
@@ -4330,7 +4342,7 @@ subroutine record(itime)
      do z=1,nzrect
         do y=1,nyrect
            do x=1,nxrect
-              rect(itime,x,y,z,:)= U(xrect(x),yrect(y),zrect(z),:)
+              rect(itime,x,y,z,:)= U(:,xrect(x),yrect(y),zrect(z))
            end do
         end do
      end do
@@ -4396,11 +4408,11 @@ subroutine record_for_restart
   write(501) irecord
   write(501) time
   write(501) record_dummy
-  write(501) (((Un(x,y,z,1),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(x,y,z,2),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(x,y,z,3),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(x,y,z,4),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-  write(501) (((Un(x,y,z,5),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(501) (((Un(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(501) (((Un(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(501) (((Un(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(501) (((Un(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+  write(501) (((Un(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
   write(501) record_dummy
   close(501)
   !
@@ -4568,12 +4580,12 @@ subroutine calculvort
      do y=1,ny
         do x=1,nx
            do j=-3,3
-              VORT(x,y,z,1) = VORT(x,y,z,1) + dyg(y)*a(j)*U(x,y+j,z,4)          &
-                                            - dzg(z)*a(j)*U(x,y,z+j,3)
-              VORT(x,y,z,2) = VORT(x,y,z,2) + dzg(z)*a(j)*U(x,y,z+j,2)          &
-                                            - dxg(x)*a(j)*U(x+j,y,z,4)
-              VORT(x,y,z,3) = VORT(x,y,z,3) + dxg(x)*a(j)*U(x+j,y,z,3)          &
-                                            - dyg(y)*a(j)*U(x,y+j,z,2)
+              VORT(1,x,y,z) = VORT(1,x,y,z) + dyg(y)*a(j)*U(4,x,y+j,z)          &
+                                            - dzg(z)*a(j)*U(3,x,y,z+j)
+              VORT(2,x,y,z) = VORT(2,x,y,z) + dzg(z)*a(j)*U(2,x,y,z+j)          &
+                                            - dxg(x)*a(j)*U(4,x+j,y,z)
+              VORT(3,x,y,z) = VORT(3,x,y,z) + dxg(x)*a(j)*U(3,x+j,y,z)          &
+                                            - dyg(y)*a(j)*U(2,x,y+j,z)
            end do
         end do
      end do
