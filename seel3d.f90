@@ -217,9 +217,9 @@ subroutine setcas
 !
 !!///// Pulse de pression avec ou sans ecoulement
    if (icas==100) then
-      nx=101
-      ny=101
-      nz=101
+      nx=26!101
+      ny=26!101
+      nz=26!101
       ntfin=200
       record_step=20
       mo=0.5
@@ -408,58 +408,58 @@ subroutine ecoulmoyen
       write(6,*) ' .. calcul numerique des gradients de vitesse '
       do x=1,nx
          do y=1,ny
-	    do z=1,nz
-		do i=-3,3
-		    duox(x,y,z) = duox(x,y,z) + dxg(x)*a(i)*uo(x+i,y,z)
-		    duoy(x,y,z) = duoy(x,y,z) + dyg(y)*a(i)*uo(x,y+i,z)
-		    duoz(x,y,z) = duoz(x,y,z) + dzg(y)*a(i)*uo(x,y,z+i)
+        do z=1,nz
+        do i=-3,3
+            duox(x,y,z) = duox(x,y,z) + dxg(x)*a(i)*uo(x+i,y,z)
+            duoy(x,y,z) = duoy(x,y,z) + dyg(y)*a(i)*uo(x,y+i,z)
+            duoz(x,y,z) = duoz(x,y,z) + dzg(y)*a(i)*uo(x,y,z+i)
 
-		    dvox(x,y,z) = dvox(x,y,z) + dxg(x)*a(i)*vo(x+i,y,z)
-		    dvoy(x,y,z) = dvoy(x,y,z) + dyg(y)*a(i)*vo(x,y+i,z)
-		    dvoz(x,y,z) = dvoz(x,y,z) + dzg(y)*a(i)*vo(x,y,z+i)
+            dvox(x,y,z) = dvox(x,y,z) + dxg(x)*a(i)*vo(x+i,y,z)
+            dvoy(x,y,z) = dvoy(x,y,z) + dyg(y)*a(i)*vo(x,y+i,z)
+            dvoz(x,y,z) = dvoz(x,y,z) + dzg(y)*a(i)*vo(x,y,z+i)
 
-		    dwox(x,y,z) = dwox(x,y,z) + dxg(x)*a(i)*wo(x+i,y,z)
-		    dwoy(x,y,z) = dwoy(x,y,z) + dyg(y)*a(i)*wo(x,y+i,z)
-		    dwoz(x,y,z) = dwoz(x,y,z) + dzg(y)*a(i)*wo(x,y,z+i)
-		end do
-	    end do
-	end do
+            dwox(x,y,z) = dwox(x,y,z) + dxg(x)*a(i)*wo(x+i,y,z)
+            dwoy(x,y,z) = dwoy(x,y,z) + dyg(y)*a(i)*wo(x,y+i,z)
+            dwoz(x,y,z) = dwoz(x,y,z) + dzg(y)*a(i)*wo(x,y,z+i)
+        end do
+        end do
+    end do
       end do
 !
       do x=-2,0
          do y=1,ny
-	    do z=1,nz
-		duox(x,y,z) =duox(1,y,z)
-		duoy(x,y,z) =duoy(1,y,z)
-		duoz(x,y,z) =duoz(1,y,z)
+        do z=1,nz
+        duox(x,y,z) =duox(1,y,z)
+        duoy(x,y,z) =duoy(1,y,z)
+        duoz(x,y,z) =duoz(1,y,z)
 
-		dvox(x,y,z) =dvox(1,y,z)
-		dvoy(x,y,z) =dvoy(1,y,z)
-		dvoz(x,y,z) =dvoz(1,y,z)
+        dvox(x,y,z) =dvox(1,y,z)
+        dvoy(x,y,z) =dvoy(1,y,z)
+        dvoz(x,y,z) =dvoz(1,y,z)
 
-		dwox(x,y,z) =dwox(1,y,z)
-		dwoy(x,y,z) =dwoy(1,y,z)
-		dwoz(x,y,z) =dwoz(1,y,z)
-	    end do
-	  end do
+        dwox(x,y,z) =dwox(1,y,z)
+        dwoy(x,y,z) =dwoy(1,y,z)
+        dwoz(x,y,z) =dwoz(1,y,z)
+        end do
+      end do
       end do
 !
       do x=nx+1,nx+3
          do y=1,ny
-	    do z=1,nz
-		duox(x,y,z) =duox(nx,y,z)
-		duoy(x,y,z) =duoy(nx,y,z)
-		duoz(x,y,z) =duoz(nx,y,z)
+        do z=1,nz
+        duox(x,y,z) =duox(nx,y,z)
+        duoy(x,y,z) =duoy(nx,y,z)
+        duoz(x,y,z) =duoz(nx,y,z)
 
-		dvox(x,y,z) =dvox(nx,y,z)
-		dvoy(x,y,z) =dvoy(nx,y,z)
-		dvoz(x,y,z) =dvoz(nx,y,z)
+        dvox(x,y,z) =dvox(nx,y,z)
+        dvoy(x,y,z) =dvoy(nx,y,z)
+        dvoz(x,y,z) =dvoz(nx,y,z)
 
-		dwox(x,y,z) =dwox(nx,y,z)
-		dwoy(x,y,z) =dwoy(nx,y,z)
-		dwoz(x,y,z) =dwoz(nx,y,z)
-	    end do
-	  end do
+        dwox(x,y,z) =dwox(nx,y,z)
+        dwoy(x,y,z) =dwoy(nx,y,z)
+        dwoz(x,y,z) =dwoz(nx,y,z)
+        end do
+      end do
       end do
 
    end if
@@ -501,8 +501,8 @@ subroutine pastemps
       dxmin = min( dxmin,xg(x+1)-xg(x) )
       dxmax = max( dxmax,xg(x+1)-xg(x) )
       do y=-2,ny+2
-	 dymin = min( dymin,yg(y+1)-yg(y) )
-	 dymax = max( dymax,yg(y+1)-yg(y) )
+     dymin = min( dymin,yg(y+1)-yg(y) )
+     dymax = max( dymax,yg(y+1)-yg(y) )
          do z=-2,nz+2
             dzmin = min( dzmin,zg(z+1)-zg(z) )
             dzmax = max( dzmax,zg(z+1)-zg(z) )
@@ -552,34 +552,34 @@ subroutine integ
          call fluxes
          call ptsint(irk)
          !// FACES
-	 call ptsright(irk,ibc_right)
-	 call ptsleft(irk)
-	 call ptsbot(irk)
-	 call ptstop(irk)
-	 call ptsfront(irk)
-	 call ptsback(irk)
+     call ptsright(irk,ibc_right)
+     call ptsleft(irk)
+     call ptsbot(irk)
+     call ptstop(irk)
+     call ptsfront(irk)
+     call ptsback(irk)
          !// ARRETES
-	 call ptsbottomfront(irk)
-	 call ptsbottomleft(irk)
-	 call ptsleftfront(irk)
-	 call ptsbottomright(irk)
-	 call ptstopleft(irk)
-	 call ptstopfront(irk)
-	 call ptsrightfront(irk)
-	 call ptsbottomback(irk)
-	 call ptsleftback(irk)
-	 call ptstopback(irk)
-	 call ptsrightback(irk)
-	 call ptstopright(irk)
+     call ptsbottomfront(irk)
+     call ptsbottomleft(irk)
+     call ptsleftfront(irk)
+     call ptsbottomright(irk)
+     call ptstopleft(irk)
+     call ptstopfront(irk)
+     call ptsrightfront(irk)
+     call ptsbottomback(irk)
+     call ptsleftback(irk)
+     call ptstopback(irk)
+     call ptsrightback(irk)
+     call ptstopright(irk)
          !// COINS
-	 call pts_c_toprightfront(irk)
-	 call pts_c_toprightback(irk)
-	 call pts_c_bottomrightfront(irk)
-	 call pts_c_bottomrightback(irk)
-	 call pts_c_topleftfront(irk)
-	 call pts_c_topleftback(irk)
-	 call pts_c_bottomleftfront(irk)
-	 call pts_c_bottomleftback(irk)
+     call pts_c_toprightfront(irk)
+     call pts_c_toprightback(irk)
+     call pts_c_bottomrightfront(irk)
+     call pts_c_bottomrightback(irk)
+     call pts_c_topleftfront(irk)
+     call pts_c_topleftback(irk)
+     call pts_c_bottomleftfront(irk)
+     call pts_c_bottomleftback(irk)
          !
          Un=Ut
       end do
@@ -942,7 +942,7 @@ subroutine ptsint(irk)
 !
                CC = - dxg(x)*DDx - dyg(y)*DDy - dzg(z)*DDz - H(x,y,z,i) + S(x,y,z,i)
                Ut(x,y,z,i) = U(x,y,z,i) + deltat*CC*rk(irk)
-	    end do
+        end do
          end do
       end do
    end do
@@ -998,16 +998,16 @@ subroutine ptsright(irk,ibc)
    do z=1,nz
       do y=1,ny
          do x=nx+1,nx+3
-	    Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-	    Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-	    Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+        Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
+        Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
+        Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        xc = xg(x) - xg(nxray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1018,9 +1018,9 @@ subroutine ptsright(irk,ibc)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1029,7 +1029,7 @@ subroutine ptsright(irk,ibc)
 !
             if(ibc==1) then
                do i=1,5
-	          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+              DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
                end do
             elseif(ibc==2) then
                DD(5) = vray * (xc*Dx(x,y,z,5) + yc*Dy(x,y,z,5)  + zc*Dz(x,y,z,5)  + Un(x,y,z,5)/r)
@@ -1041,7 +1041,7 @@ subroutine ptsright(irk,ibc)
             end if
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1086,29 +1086,29 @@ subroutine ptsleft(irk)
 !
    do y=1,ny
       Dy(-2:0,y,1:nz,:) = a(3) * (Un(-2:0,y+3,1:nz,:) - Un(-2:0,y-3,1:nz,:))   &
-	                 +a(2) * (Un(-2:0,y+2,1:nz,:) - Un(-2:0,y-2,1:nz,:))   &
-	                 +a(1) * (Un(-2:0,y+1,1:nz,:) - Un(-2:0,y-1,1:nz,:))
+                     +a(2) * (Un(-2:0,y+2,1:nz,:) - Un(-2:0,y-2,1:nz,:))   &
+                     +a(1) * (Un(-2:0,y+1,1:nz,:) - Un(-2:0,y-1,1:nz,:))
    end do
 !
    do z=1,nz
       Dz(-2:0,1:ny,z,:) = a(3) * (Un(-2:0,1:ny,z+3,:) - Un(-2:0,1:ny,z-3,:))   &
-	                 +a(2) * (Un(-2:0,1:ny,z+2,:) - Un(-2:0,1:ny,z-2,:))   &
-	                 +a(1) * (Un(-2:0,1:ny,z+1,:) - Un(-2:0,1:ny,z-1,:))
+                     +a(2) * (Un(-2:0,1:ny,z+2,:) - Un(-2:0,1:ny,z-2,:))   &
+                     +a(1) * (Un(-2:0,1:ny,z+1,:) - Un(-2:0,1:ny,z-1,:))
    end do
 !
    do z=1,nz
       do y=1,ny
          do x=-2,0
-	    Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-	    Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-	    Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+        Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
+        Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
+        Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc=xg(x)- xg(nxray)
-	    yc=yg(y)- yg(nyray)
-	    zc=zg(z)- zg(nzray)
+        yc=yg(y)- yg(nyray)
+        zc=zg(z)- zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1119,9 +1119,9 @@ subroutine ptsleft(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1129,11 +1129,11 @@ subroutine ptsleft(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1195,10 +1195,10 @@ subroutine ptstop(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-  	    yc = yg(y) - yg(nyray)
-  	    zc = zg(z) - zg(nzray)
-	    r  = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d = sqrt(xc**2 + yc**2) 
+          yc = yg(y) - yg(nyray)
+          zc = zg(z) - zg(nzray)
+        r  = sqrt(xc**2 + yc**2 + zc**2)
+        r2d = sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1209,9 +1209,9 @@ subroutine ptstop(irk)
                sinphi=1                   !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1219,11 +1219,11 @@ subroutine ptstop(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1280,16 +1280,16 @@ subroutine ptsbot(irk)
    do z=1,nz
       do y=-2,0
          do x=1,nx
-	    Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-	    Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-	    Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+        Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
+        Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
+        Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc=xg(x)- xg(nxray)
-	    yc=yg(y)- yg(nyray)
-	    zc=zg(z)- zg(nzray)
+        yc=yg(y)- yg(nyray)
+        zc=zg(z)- zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1300,9 +1300,9 @@ subroutine ptsbot(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1310,11 +1310,11 @@ subroutine ptsbot(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1372,16 +1372,16 @@ subroutine ptsback(irk)
    do z=-2,0
       do x=1,nx
          do y=1,ny
-	    Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
-	    Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
-	    Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
+        Dx(x,y,z,:) = Dx(x,y,z,:) * dxg(x)
+        Dy(x,y,z,:) = Dy(x,y,z,:) * dyg(y)
+        Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        xc = xg(x) - xg(nxray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1392,9 +1392,9 @@ subroutine ptsback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1402,11 +1402,11 @@ subroutine ptsback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1473,8 +1473,8 @@ subroutine ptsfront(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !    
-	    r  = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r  = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1485,9 +1485,9 @@ subroutine ptsfront(irk)
                sinphi=1                !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 ! 
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1495,11 +1495,11 @@ subroutine ptsfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1566,8 +1566,8 @@ subroutine ptsbottomleft(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -1591,11 +1591,11 @@ subroutine ptsbottomleft(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1651,7 +1651,7 @@ subroutine ptsbottomback(irk)
    do x=1,nx
       Dx(x,-2:0,-2:0,:) = a(3)*(Un(x+3,-2:0,-2:0,:) - Un(x-3,-2:0,-2:0,:)) &
                          +a(2)*(Un(x+2,-2:0,-2:0,:) - Un(x-2,-2:0,-2:0,:)) &
-	                 +a(1)*(Un(x+1,-2:0,-2:0,:) - Un(x-1,-2:0,-2:0,:))
+                     +a(1)*(Un(x+1,-2:0,-2:0,:) - Un(x-1,-2:0,-2:0,:))
    end do
 !
    do z=-2,0
@@ -1662,8 +1662,8 @@ subroutine ptsbottomback(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -1687,11 +1687,11 @@ subroutine ptsbottomback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1746,8 +1746,8 @@ subroutine ptsleftback(irk)
 !
    do y=1,ny
       Dy(-2:0,y,-2:0,:) = a(3)*(Un(-2:0,y+3,-2:0,:) - Un(-2:0,y-3,-2:0,:)) &
-	                 +a(2)*(Un(-2:0,y+2,-2:0,:) - Un(-2:0,y-2,-2:0,:)) &
-	                 +a(1)*(Un(-2:0,y+1,-2:0,:) - Un(-2:0,y-1,-2:0,:))
+                     +a(2)*(Un(-2:0,y+2,-2:0,:) - Un(-2:0,y-2,-2:0,:)) &
+                     +a(1)*(Un(-2:0,y+1,-2:0,:) - Un(-2:0,y-1,-2:0,:))
    end do
 !
    do z=-2,0
@@ -1758,11 +1758,11 @@ subroutine ptsleftback(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
-	    r  = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r  = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1773,9 +1773,9 @@ subroutine ptsleftback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1783,11 +1783,11 @@ subroutine ptsleftback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1842,8 +1842,8 @@ subroutine ptstopright(irk)
 !
    do z=1,nz
       Dz(nx+1:nx+3,ny+1:ny+3,z,:) = a(3)*(Un(nx+1:nx+3,ny+1:ny+3,z+3,:) - Un(nx+1:nx+3,ny+1:ny+3,z-3,:)) &
-	                           +a(2)*(Un(nx+1:nx+3,ny+1:ny+3,z+2,:) - Un(nx+1:nx+3,ny+1:ny+3,z-2,:)) &
-	                           +a(1)*(Un(nx+1:nx+3,ny+1:ny+3,z+1,:) - Un(nx+1:nx+3,ny+1:ny+3,z-1,:))
+                               +a(2)*(Un(nx+1:nx+3,ny+1:ny+3,z+2,:) - Un(nx+1:nx+3,ny+1:ny+3,z-2,:)) &
+                               +a(1)*(Un(nx+1:nx+3,ny+1:ny+3,z+1,:) - Un(nx+1:nx+3,ny+1:ny+3,z-1,:))
    end do
 !
    do z=1,nz
@@ -1854,11 +1854,11 @@ subroutine ptstopright(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
+        yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -1869,9 +1869,9 @@ subroutine ptstopright(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -1879,11 +1879,11 @@ subroutine ptstopright(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -1951,8 +1951,8 @@ subroutine ptsbottomright(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -1976,11 +1976,11 @@ subroutine ptsbottomright(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2047,8 +2047,8 @@ subroutine ptstopleft(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -2072,11 +2072,11 @@ subroutine ptstopleft(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2133,7 +2133,7 @@ subroutine ptstopback(irk)
    do x=1,nx
       Dx(x,ny+1:ny+3,-2:0,:) = a(3)*(Un(x+3,ny+1:ny+3,-2:0,:) - Un(x-3,ny+1:ny+3,-2:0,:)) &
                               +a(2)*(Un(x+2,ny+1:ny+3,-2:0,:) - Un(x-2,ny+1:ny+3,-2:0,:)) &
-	                      +a(1)*(Un(x+1,ny+1:ny+3,-2:0,:) - Un(x-1,ny+1:ny+3,-2:0,:))
+                          +a(1)*(Un(x+1,ny+1:ny+3,-2:0,:) - Un(x-1,ny+1:ny+3,-2:0,:))
    end do
 !
    do z=-2,0
@@ -2144,8 +2144,8 @@ subroutine ptstopback(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -2169,11 +2169,11 @@ subroutine ptstopback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2241,11 +2241,11 @@ subroutine ptsrightback(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
-	    r  = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r  = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -2256,9 +2256,9 @@ subroutine ptsrightback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -2266,11 +2266,11 @@ subroutine ptsrightback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2337,11 +2337,11 @@ subroutine ptsrightfront(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
-	    r  = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r  = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -2352,9 +2352,9 @@ subroutine ptsrightfront(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -2362,11 +2362,11 @@ subroutine ptsrightfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2421,8 +2421,8 @@ subroutine ptsleftfront(irk)
 !
    do y=1,ny
       Dy(-2:0,y,nz+1:nz+3,:) = a(3)*(Un(-2:0,y+3,nz+1:nz+3,:) - Un(-2:0,y-3,nz+1:nz+3,:)) &
-	                      +a(2)*(Un(-2:0,y+2,nz+1:nz+3,:) - Un(-2:0,y-2,nz+1:nz+3,:)) &
-	                      +a(1)*(Un(-2:0,y+1,nz+1:nz+3,:) - Un(-2:0,y-1,nz+1:nz+3,:))
+                          +a(2)*(Un(-2:0,y+2,nz+1:nz+3,:) - Un(-2:0,y-2,nz+1:nz+3,:)) &
+                          +a(1)*(Un(-2:0,y+1,nz+1:nz+3,:) - Un(-2:0,y-1,nz+1:nz+3,:))
    end do
 !
    do z=nz+1,nz+3
@@ -2433,8 +2433,8 @@ subroutine ptsleftfront(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -2458,11 +2458,11 @@ subroutine ptsleftfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2529,8 +2529,8 @@ subroutine ptsbottomfront(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
             r = sqrt(xc**2 + yc**2 + zc**2)
             r2d= sqrt(xc**2 + yc**2)
@@ -2554,11 +2554,11 @@ subroutine ptsbottomfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !      
          end do
@@ -2625,11 +2625,11 @@ subroutine ptstopfront(irk)
             Dz(x,y,z,:) = Dz(x,y,z,:) * dzg(z)
 !
             xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+        yc = yg(y) - yg(nyray)
+        zc = zg(z) - zg(nzray)
 !
-	    r  = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r  = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -2640,9 +2640,9 @@ subroutine ptstopfront(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -2650,11 +2650,11 @@ subroutine ptstopfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i)  + zc*Dz(x,y,z,i)  + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2728,8 +2728,8 @@ subroutine pts_c_bottomleftback(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -2740,9 +2740,9 @@ subroutine pts_c_bottomleftback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -2750,14 +2750,14 @@ subroutine pts_c_bottomleftback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
-	 end do
+     end do
       end do
    end do
 !
@@ -2828,8 +2828,8 @@ subroutine pts_c_bottomrightback(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -2840,9 +2840,9 @@ subroutine pts_c_bottomrightback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -2850,11 +2850,11 @@ subroutine pts_c_bottomrightback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -2928,8 +2928,8 @@ subroutine pts_c_toprightback(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -2940,9 +2940,9 @@ subroutine pts_c_toprightback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -2950,11 +2950,11 @@ subroutine pts_c_toprightback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -3028,8 +3028,8 @@ subroutine pts_c_topleftback(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -3040,9 +3040,9 @@ subroutine pts_c_topleftback(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -3050,14 +3050,14 @@ subroutine pts_c_topleftback(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
-	    end do
+        end do
           end do
         end do
 !
@@ -3128,8 +3128,8 @@ subroutine pts_c_bottomleftfront(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -3140,9 +3140,9 @@ subroutine pts_c_bottomleftfront(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -3150,11 +3150,11 @@ subroutine pts_c_bottomleftfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -3228,8 +3228,8 @@ subroutine pts_c_bottomrightfront(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -3240,9 +3240,9 @@ subroutine pts_c_bottomrightfront(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -3250,11 +3250,11 @@ subroutine pts_c_bottomrightfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -3328,8 +3328,8 @@ subroutine pts_c_toprightfront(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -3340,9 +3340,9 @@ subroutine pts_c_toprightfront(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -3350,11 +3350,11 @@ subroutine pts_c_toprightfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -3428,8 +3428,8 @@ subroutine pts_c_topleftfront(irk)
             yc = yg(y) - yg(nyray)
             zc = zg(z) - zg(nzray)
 !
-	    r = sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+        r = sqrt(xc**2 + yc**2 + zc**2)
+        r2d= sqrt(xc**2 + yc**2) 
             costheta = zc/r
             sintheta = r2d/r
             if(r2d.ne.0) then
@@ -3440,9 +3440,9 @@ subroutine pts_c_topleftfront(irk)
                sinphi=1                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+        xc = sintheta*cosphi
+        yc = sintheta*sinphi
+        zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
             uetheta =  uo(x,y,z)*costheta*cosphi + vo(x,y,z)*costheta*sinphi -sintheta*wo(x,y,z)
@@ -3450,11 +3450,11 @@ subroutine pts_c_topleftfront(irk)
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
             do i=1,5
-	      DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
+          DD(i) = vray * (xc*Dx(x,y,z,i) + yc*Dy(x,y,z,i) + zc*Dz(x,y,z,i) + Un(x,y,z,i)/r)
             end do
 !
             do i=1,5          
-	      Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
+          Ut(x,y,z,i) = U(x,y,z,i) - DD(i)*deltat*rk(irk)
             end do
 !
          end do
@@ -4012,10 +4012,10 @@ subroutine ts(irk)
       do z=-2,nz+3
          do y=-2,ny+3
             do x=-2,nx+3   
-		  S(x,y,z,1) = amp * sin(omega*(time+ck(irk)*deltat)) * exp(-alpha*(xg(x)**2 &
-				 + yg(y)**2 + zg(z)**2))            	
-		  S(x,y,z,5) = S(x,y,z,1)
-	    end do
+          S(x,y,z,1) = amp * sin(omega*(time+ck(irk)*deltat)) * exp(-alpha*(xg(x)**2 &
+                 + yg(y)**2 + zg(z)**2))                
+          S(x,y,z,5) = S(x,y,z,1)
+        end do
          end do
       end do
    end if
@@ -4591,7 +4591,7 @@ subroutine calculvort
                                              - dxg(x)*a(j)*U(x+j,y,z,4)
                VORT(x,y,z,3) = VORT(x,y,z,3) + dxg(x)*a(j)*U(x+j,y,z,3)          &
                                              - dyg(y)*a(j)*U(x,y+j,z,2)
-	    end do
+        end do
          end do
       end do
    end do
@@ -4772,10 +4772,10 @@ end if
         rk(3) = 1./2.
         rk(4) = 1.
 !
-	ck(1) = 0.
-	ck(2) = 1./4.
-	ck(3) = 1./3.
-	ck(4) = 1./2.
+    ck(1) = 0.
+    ck(2) = 1./4.
+    ck(3) = 1./3.
+    ck(4) = 1./2.
       elseif (nrk.eq.5) then
         rk(1) = 0.169193539
         rk(2) = 0.23717924
@@ -4783,11 +4783,11 @@ end if
         rk(4) = 1./2. 
         rk(5) = 1.
 !
-	ck(1) = 0.
-	ck(2) = 0.169193539
-	ck(3) = 0.23717924
-	ck(4) = 0.333116
-	ck(5) = 1./2.
+    ck(1) = 0.
+    ck(2) = 0.169193539
+    ck(3) = 0.23717924
+    ck(4) = 0.333116
+    ck(5) = 1./2.
       end if
 !
 !
