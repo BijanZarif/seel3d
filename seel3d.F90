@@ -20,31 +20,32 @@ module mod_grille
   real, dimension(:), allocatable :: xg,dxg
   real, dimension(:), allocatable :: yg,dyg
   real, dimension(:), allocatable :: zg,dzg
-  real :: deltax,deltay,deltaz,deltat,CFL
-  integer :: nymin,nymax,nxmax,nxray,nyray,nzray
-  integer :: nt0,nx,ny,nz,ntfin,record_step
-  real :: time
+  real    :: deltax,deltay,deltaz,deltat,CFL
+  integer :: nt0,ntfin,record_step
+  integer :: nx=51,ny=51,nz=51,nxray=26,nyray=26,nzray=26
+  real    :: time
 end module mod_grille
 !
 module mod_scheme
   implicit none
-  real a(-3:3),a24(7),a15(7),a06(7)
-  real rk(5),ck(5)
-  real dfc2(1:3),dfc20(1:3),dfc02(1:3),dfc4(1:5),dfc13(1:5),dfc31(1:5)
-  real dfc04(1:5),dfc40(1:5),dfc6(-3:3)
-  real dfilt8(-4:4),dfilt6(-3:3),dfilt4(-2:2),dfilt2(-1:1)
-  integer :: numrk,nrk
-  real :: pi=acos(-1.)
+  real    :: a(-3:3),a24(7),a15(7),a06(7)
+  real,dimension(-3:3,-3:3)      :: ax,ay,az
+  real    :: rk(5),ck(5)
+  real    :: dfc2(1:3),dfc20(1:3),dfc02(1:3),dfc4(1:5),dfc13(1:5),dfc31(1:5)
+  real    :: dfc04(1:5),dfc40(1:5),dfc6(-3:3)
+  real    :: dfilt8(-4:4),dfilt6(-3:3),dfilt4(-2:2),dfilt2(-1:1)
+  integer :: nrk
+  real    :: pi=acos(-1.)
 end module mod_scheme
 !
 module mod_filtrage
   implicit none
-  real :: cfx,cfx6,cfx4,cfx2,cfx1
-  integer :: xfmin_x,xfmax_x,yfmin_x,yfmax_x,zfmin_x,zfmax_x
-  real :: cfy,cfy6,cfy4,cfy2,cfy1
-  integer ::xfmin_y,xfmax_y,yfmin_y,yfmax_y,zfmin_y,zfmax_y
-  real :: cfz,cfz6,cfz4,cfz2,cfz1
-  integer ::xfmin_z,xfmax_z,yfmin_z,yfmax_z,zfmin_z,zfmax_z
+  real    :: cfx,cfx6,cfx4,cfx2,cfx1
+  integer :: xfmin_x=51,xfmax_x=51,yfmin_x=51,yfmax_x=51,zfmin_x=51,zfmax_x=51
+  real    :: cfy,cfy6,cfy4,cfy2,cfy1
+  integer :: xfmin_y=51,xfmax_y=51,yfmin_y=51,yfmax_y=51,zfmin_y=51,zfmax_y=51
+  real    :: cfz,cfz6,cfz4,cfz2,cfz1
+  integer :: xfmin_z=51,xfmax_z=51,yfmin_z=51,yfmax_z=51,zfmin_z=51,zfmax_z=51
 end module mod_filtrage
 !
 module mod_condlim
@@ -75,20 +76,20 @@ end module mod_onde
 module mod_vectors
   use mod_grille
   implicit none
-  real, dimension(:,:,:,:), allocatable :: U,Un,Ut,E,F,H,S,G
-  real, dimension(:,:,:), allocatable :: rhoo,uo,vo,wo,po,coo
-  real, dimension(:,:,:), allocatable :: duox,duoy,duoz,dvox,dvoy,dvoz,dwox,dwoy,dwoz,dpox,dpoy,dpoz
+  real   ,dimension(:,:,:,:)  ,allocatable :: U,Un,Ut,E,F,H,S,G
+  real   ,dimension(:,:,:)    ,allocatable :: rhoo,uo,vo,wo,po,coo
+  real   ,dimension(:,:,:)    ,allocatable :: duox,duoy,duoz,dvox,dvoy,dvoz,dwox,dwoy,dwoz,dpox,dpoy,dpoz
+  real   ,dimension(:,:,:,:)  ,allocatable :: VORT
+  real   ,dimension(:)        ,allocatable :: residu
+  real   ,dimension(:,:,:,:,:),allocatable :: rect
+  integer,dimension(:)        ,allocatable :: xrect,yrect,zrect
   real :: gamma,rgp,theta,phi
-  real, dimension(:,:,:,:), allocatable :: VORT
-  real, dimension(:), allocatable :: residu
-  real, dimension(:,:,:,:,:),allocatable :: rect
-  integer, dimension(:),allocatable :: xrect,yrect,zrect
 end module mod_vectors
 !
 module mod_record
   implicit none
-  real :: record_dummy=123.321
-  real :: read_dummy
+  real    :: record_dummy=123.321
+  real    :: read_dummy
   logical :: o_record_vort=.false.
   logical :: o_rect=.true.
   character (len=40) :: record_filename_champs="bin_champs2d"
@@ -221,9 +222,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=26!101
-     ny=26!101
-     nz=26!101
+     nx=101
+     ny=101
+     nz=101
      ntfin=200
      record_step=500
      mo=0.5
@@ -490,30 +491,17 @@ end subroutine ecoulmoyen
   integer :: x,y,z
   !
   !
-  uopmax = 0.
-  vopmax = 0.
-  wopmax = 0.
-  dxmin = xg(nx) - xg(1)
-  dymin = yg(ny) - yg(1)
-  dzmin = zg(nz) - zg(1)
-  dxmax = 0.
-  dymax = 0.
-  dzmax = 0.
-  do x=-2,nx+2
-     dxmin = min( dxmin,xg(x+1)-xg(x) )
-     dxmax = max( dxmax,xg(x+1)-xg(x) )
-     do y=-2,ny+2
-        dymin = min( dymin,yg(y+1)-yg(y) )
-        dymax = max( dymax,yg(y+1)-yg(y) )
-        do z=-2,nz+2
-           dzmin = min( dzmin,zg(z+1)-zg(z) )
-           dzmax = max( dzmax,zg(z+1)-zg(z) )
-           uopmax = max( uopmax,uo(x,y,z)+sqrt(gamma*po(x,y,z)*rhoo(x,y,z)) )
-           vopmax = max( vopmax,vo(x,y,z)+sqrt(gamma*po(x,y,z)*rhoo(x,y,z)) )
-           wopmax = max( wopmax,wo(x,y,z)+sqrt(gamma*po(x,y,z)*rhoo(x,y,z)) )
-        end do
-     end do
-  end do
+  dzmin = minval( zg(-1:nz+3)-zg(-2:nz+2) )
+  dzmax = maxval( zg(-1:nz+3)-zg(-2:nz+2) )
+  dymin = minval( yg(-1:ny+3)-yg(-2:ny+2) )
+  dymax = maxval( yg(-1:ny+3)-yg(-2:ny+2) )
+  dxmin = minval( xg(-1:nx+3)-xg(-2:nx+2) )
+  dxmax = maxval( xg(-1:nx+3)-xg(-2:nx+2) )
+
+  uopmax = maxval( uo+sqrt(gamma*po*rhoo) )
+  vopmax = maxval( vo+sqrt(gamma*po*rhoo) )
+  wopmax = maxval( wo+sqrt(gamma*po*rhoo) )
+
   !
   deltat=CFL*min(dxmin/uopmax,dymin/vopmax,dzmin/wopmax)
 
@@ -572,39 +560,38 @@ enddo
      call record(itime)           
      do irk=1,nrk
 
-        call ts(irk)                ! calcul de S
-        call fluxes                 ! Un -> E,F,G,H
-
-        call ptsint(irk)            ! U +      E,F,G,H,S -> Ut
-        !// FACES                   ! U + Un + E,F,G,H,S -> Ut
-        call ptsright(irk,ibc_right)
-        call ptsleft(irk)
-        call ptsbot(irk)
-        call ptstop(irk)
-        call ptsfront(irk)
-        call ptsback(irk)
-        !// ARRETES
-        call ptsbottomfront(irk)
-        call ptsbottomleft(irk)
-        call ptsleftfront(irk)
-        call ptsbottomright(irk)
-        call ptstopleft(irk)
-        call ptstopfront(irk)
-        call ptsrightfront(irk)
-        call ptsbottomback(irk)
-        call ptsleftback(irk)
-        call ptstopback(irk)
-        call ptsrightback(irk)
-        call ptstopright(irk)
-        !// COINS
-        call pts_c_toprightfront(irk)
-        call pts_c_toprightback(irk)
-        call pts_c_bottomrightfront(irk)
-        call pts_c_bottomrightback(irk)
-        call pts_c_topleftfront(irk)
-        call pts_c_topleftback(irk)
-        call pts_c_bottomleftfront(irk)
-        call pts_c_bottomleftback(irk)
+         call ts(irk)
+         call fluxes
+         call ptsint(irk)
+         !// FACES
+	 call ptsright(irk,ibc_right)
+	 call ptsleft(irk)
+	 call ptsbot(irk)
+	 call ptstop(irk)
+	 call ptsfront(irk)
+	 call ptsback(irk)
+         !// ARRETES
+	 call ptsbottomfront(irk)
+	 call ptsbottomleft(irk)
+	 call ptsleftfront(irk)
+	 call ptsbottomright(irk)
+	 call ptstopleft(irk)
+	 call ptstopfront(irk)
+	 call ptsrightfront(irk)
+	 call ptsbottomback(irk)
+	 call ptsleftback(irk)
+	 call ptstopback(irk)
+	 call ptsrightback(irk)
+	 call ptstopright(irk)
+         !// COINS
+	 call pts_c_toprightfront(irk)
+	 call pts_c_toprightback(irk)
+	 call pts_c_bottomrightfront(irk)
+	 call pts_c_bottomrightback(irk)
+	 call pts_c_topleftfront(irk)
+	 call pts_c_topleftback(irk)
+	 call pts_c_bottomleftfront(irk)
+	 call pts_c_bottomleftback(irk)
 !
 !$OMP BARRIER
 !$OMP DO  
@@ -962,28 +949,30 @@ subroutine ptsint(irk)
   use mod_scheme
   use mod_vectors
   implicit none
-  real :: CC(5),DDx(5),DDy(5),DDz(5)
-  integer :: irk,x,y,z
+  real :: CC,DDx,DDy,DDz
+  integer :: irk,x,y,z,i
   !
 !$OMP DO  collapse(2)
      do z=1,nz
         do y=1,ny
 !$OMP SIMD private(ddx,ddy,ddz,cc)
            do x=1,nx
-              DDx = a(3)*(E(:,x+3,y,z) - E(:,x-3,y,z))    &
-                   +a(2)*(E(:,x+2,y,z) - E(:,x-2,y,z))    &
-                   +a(1)*(E(:,x+1,y,z) - E(:,x-1,y,z))
+             do i=1,5
+              DDx = a(3)*(E(i,x+3,y,z) - E(i,x-3,y,z))    &
+                   +a(2)*(E(i,x+2,y,z) - E(i,x-2,y,z))    &
+                   +a(1)*(E(i,x+1,y,z) - E(i,x-1,y,z))
               ! 
-              DDy = a(3)*(F(:,x,y+3,z) - F(:,x,y-3,z))    &
-                   +a(2)*(F(:,x,y+2,z) - F(:,x,y-2,z))    &
-                   +a(1)*(F(:,x,y+1,z) - F(:,x,y-1,z))
+              DDy = a(3)*(F(i,x,y+3,z) - F(i,x,y-3,z))    &
+                   +a(2)*(F(i,x,y+2,z) - F(i,x,y-2,z))    &
+                   +a(1)*(F(i,x,y+1,z) - F(i,x,y-1,z))
               ! 
-              DDz = a(3)*(G(:,x,y,z+3) - G(:,x,y,z-3))    &
-                   +a(2)*(G(:,x,y,z+2) - G(:,x,y,z-2))    &
-                   +a(1)*(G(:,x,y,z+1) - G(:,x,y,z-1))
+              DDz = a(3)*(G(i,x,y,z+3) - G(i,x,y,z-3))    &
+                   +a(2)*(G(i,x,y,z+2) - G(i,x,y,z-2))    &
+                   +a(1)*(G(i,x,y,z+1) - G(i,x,y,z-1))
               !
-              CC = - dxg(x)*DDx - dyg(y)*DDy - dzg(z)*DDz - H(:,x,y,z) + S(:,x,y,z)
-              Ut(:,x,y,z) = U(:,x,y,z) + deltat*CC*rk(irk)
+              CC = - dxg(x)*DDx - dyg(y)*DDy - dzg(z)*DDz - H(i,x,y,z) + S(i,x,y,z)
+              Ut(i,x,y,z) = U(i,x,y,z) + deltat*CC*rk(irk)
+           end do
            end do
         end do
      end do
@@ -1005,23 +994,13 @@ subroutine ptsright(irk,ibc)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,ibc,i,j,x,y,z
+   integer :: irk,ibc,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -1031,26 +1010,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=1,nz
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=z
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1085,7 +1070,10 @@ dirx=1
                DD(3) = uo(x,y,z) * Dx(3) + vo(x,y,z)*Dy(3) + wo(x,y,z)*Dz(3) + Dy(5)*rhoo(x,y,z)
                DD(4) = uo(x,y,z) * Dx(4) + vo(x,y,z)*Dy(4) + wo(x,y,z)*Dz(4) + Dz(5)*rhoo(x,y,z)
                DD(1) = uo(x,y,z) * Dx(1) + vo(x,y,z)*Dy(1) + wo(x,y,z)*Dz(1) &
-                     -(uo(x,y,z) * Dx(5) + vo(x,y,z)*Dy(5) + wo(x,y,z)*Dz(5) - DD(5) ) / coo(x,y,z)**2
+                     -(uo(x,y,z) * Dx(5) + vo(x,y,z)*Dy(5) + wo(x,y,z)*Dz(5) - &
+                         vray * (xc*Dx(5) + yc*Dy(5)  + zc*Dz(5)  + Un(5,x,y,z)*r) ) / coo(x,y,z)**2
+            else
+              DD=0.
             end if
 !
              Ut(:,x,y,z) = U(:,x,y,z) - DD*deltat*rk(irk)
@@ -1112,23 +1100,13 @@ subroutine ptsleft(irk)
    use mod_onde
    use mod_vectors
    implicit none
-   integer :: irk,j,x,y,z,i
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,co,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -1138,26 +1116,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=1,nz
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=z
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1209,23 +1193,13 @@ subroutine ptstop(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -1242,19 +1216,25 @@ dirx=0
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1306,23 +1286,13 @@ subroutine ptsbot(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -1339,19 +1309,25 @@ dirx=0
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1404,23 +1380,13 @@ subroutine ptsback(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -1437,19 +1403,25 @@ dirx=0
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1502,23 +1474,13 @@ subroutine ptsfront(irk)
    use mod_scheme
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -1535,19 +1497,25 @@ dirx=0
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1600,23 +1568,13 @@ subroutine ptsbottomleft(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -1626,26 +1584,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=1,nz
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=z
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1698,23 +1662,13 @@ subroutine ptsbottomback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -1731,19 +1685,25 @@ dirx=0
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1796,23 +1756,13 @@ subroutine ptsleftback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real ::DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -1822,26 +1772,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=-2,0
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1894,23 +1850,14 @@ subroutine ptstopright(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+
 !
 
 dirz=0
@@ -1920,26 +1867,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=1,nz
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=z
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -1993,23 +1946,13 @@ subroutine ptsbottomright(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -2019,26 +1962,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=1,nz
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=z
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2091,23 +2040,13 @@ subroutine ptstopleft(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=0
@@ -2117,26 +2056,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=1,nz
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=z
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2190,23 +2135,13 @@ subroutine ptstopback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -2223,19 +2158,25 @@ dirx=0
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2289,23 +2230,13 @@ subroutine ptsrightback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -2315,26 +2246,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=-2,0
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2387,23 +2324,13 @@ subroutine ptsrightfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -2420,19 +2347,25 @@ dirx=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2485,23 +2418,13 @@ subroutine ptsleftfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -2511,26 +2434,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=1,ny
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=nz
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2583,23 +2512,13 @@ subroutine ptsbottomfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -2616,19 +2535,25 @@ dirx=0
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2681,23 +2606,13 @@ subroutine ptstopfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -2714,19 +2629,25 @@ dirx=0
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2779,23 +2700,13 @@ subroutine pts_c_bottomleftback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -2805,26 +2716,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=-2,0
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2877,23 +2794,13 @@ subroutine pts_c_bottomrightback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -2903,26 +2810,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=-2,0
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -2975,23 +2888,13 @@ subroutine pts_c_toprightback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -3001,26 +2904,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=-2,0
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3073,23 +2982,13 @@ subroutine pts_c_topleftback(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=-1
@@ -3099,26 +2998,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=-2,0
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3171,23 +3076,13 @@ subroutine pts_c_bottomleftfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -3197,26 +3092,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=nz
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3269,23 +3170,13 @@ subroutine pts_c_bottomrightfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -3295,26 +3186,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=-2,0
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd)
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd)
          do x=nx+1,nx+3
 
          z3=nz
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3367,23 +3264,13 @@ subroutine pts_c_toprightfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -3393,26 +3280,32 @@ dirx=1
 !$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=nx+1,nx+3
 
          z3=nz
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3465,23 +3358,13 @@ subroutine pts_c_topleftfront(irk)
    use mod_condlim
    use mod_vectors
    implicit none
-   integer :: irk,i,j,x,y,z
+   integer :: irk,i,j,x,y,z,k
    real :: DD(5),r,r2d,xc,yc,zc,vray,costheta,sintheta,sinphi,cosphi
    real, dimension(5) :: Dx,Dy,Dz
    real :: uer, uetheta, uephi
-  real,dimension(-3:3,-3:3)      :: ax,ay,az
   integer :: dirx,diry,dirz,x1,x2,y1,y2,z1,z2,x3,y3,z3
 !
 !
-  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
-  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
-  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
-  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
-  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
-  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
-  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
-  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
-  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
 !
 
 dirz=1
@@ -3491,26 +3374,32 @@ dirx=-1
 !$OMP DO  collapse(2)
        do z=nz+1,nz+3
        do y=ny+1,ny+3
-!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
+!!$OMP SIMD private(x3,y3,z3,Dx,dy,dz,xc,yc,zc,r,r2d,costheta,sintheta,cosphi,sinphi,uer,uetheta,uephi,vray,dd) 
          do x=-2,0
 
          z3=nz
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 
-       Dx=0.
-       Dy=0.
-       Dz=0.
-
-         do j=-3,3
-           Dx = Dx - ax(j,x-x3)*Un(:,x3-j,y   ,z   )
-           Dy = Dy - ay(j,y-y3)*Un(:,x   ,y3-j,z   )
-           Dz = Dz - az(j,z-z3)*Un(:,x   ,y   ,z3-j)
+         do k=1,5
+           Dx(k)=0.
+           Dy(k)=0.
+           Dz(k)=0.
          enddo
 
-           Dx = Dx* dxg(x)
-           Dy = Dy* dyg(y)
-           Dz = Dz* dxg(z)
+           do j=-3,3
+         do k=1,5
+             Dx(k) = Dx(k) - ax(j,x-x3)*Un(k,x3-j,y   ,z   )
+             Dy(k) = Dy(k) - ay(j,y-y3)*Un(k,x   ,y3-j,z   )
+             Dz(k) = Dz(k) - az(j,z-z3)*Un(k,x   ,y   ,z3-j)
+         enddo
+           enddo
+
+         do k=1,5
+           Dx(k) = Dx(k)* dxg(x)
+           Dy(k) = Dy(k)* dyg(y)
+           Dz(k) = Dz(k)* dxg(z)
+         enddo
 !
 	    xc = xg(x) - xg(nxray)
 	    yc = yg(y) - yg(nyray)
@@ -3719,108 +3608,53 @@ subroutine filtragex_sup
    integer :: x,y,z,i,j
 !
 !
-!// Points droits (x=nx ; x=nx+1 ; x=nx+2)
-!
-!
-   x=nx
+
 !$OMP DO  !collapse(2)
       do z=zfmin_x,zfmax_x
 !$OMP SIMD 
          do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx6*                         &
-                          ( dfilt6(3)*(Ut(:,x+3,y,z)+Ut(:,x-3,y,z))  &
-                           +dfilt6(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
-                           +dfilt6(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
-                           +dfilt6(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   x=nx+1
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx4*                       &
-                         ( dfilt4(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
-                          +dfilt4(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
-                          +dfilt4(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   x=nx+2
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx2*                        &
-                         ( dfilt2(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
-                          +dfilt2(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   x=nx+3
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx1*0.5*(Ut(:,x,y,z)-Ut(:,x-1,y,z))
-      end do
-   end do
-!$OMP end DO nowait
-!
-!
+          do i=1,5
+
 !// Points gauches  (x=1 ; x=0 ; x=-1)
-!
-!
-   x=1
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx6*                         &
-                          ( dfilt6(3)*(Ut(:,x+3,y,z)+Ut(:,x-3,y,z))  &
-                           +dfilt6(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
-                           +dfilt6(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
-                           +dfilt6(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   x=0
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx4*                       &
-                         ( dfilt4(2)*(Ut(:,x+2,y,z)+Ut(:,x-2,y,z))  &
-                          +dfilt4(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
-                          +dfilt4(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   x=-1
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx2*                        &
-                         ( dfilt2(1)*(Ut(:,x+1,y,z)+Ut(:,x-1,y,z))  &
-                          +dfilt2(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-!
    x=-2
-!$OMP DO  !collapse(2)
-      do z=zfmin_x,zfmax_x
-!$OMP SIMD 
-         do y=yfmin_x,yfmax_x
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfx1*0.5*(Ut(:,x,y,z)-Ut(:,x+1,y,z))
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x+1,y,z))
+   x=-1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*                        &
+                         ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                          +dfilt2(0)*Ut(i,x,y,z) )
+   x=0
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*                       &
+                         ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                          +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                          +dfilt4(0)*Ut(i,x,y,z) )
+   x=1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*                         &
+                          ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
+                           +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                           +dfilt6(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                           +dfilt6(0)*Ut(i,x,y,z) )
+
+!// Points droits (x=nx ; x=nx+1 ; x=nx+2)
+
+   x=nx
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx6*                         &
+                          ( dfilt6(3)*(Ut(i,x+3,y,z)+Ut(i,x-3,y,z))  &
+                           +dfilt6(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                           +dfilt6(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                           +dfilt6(0)*Ut(i,x,y,z) )
+   x=nx+1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx4*                       &
+                         ( dfilt4(2)*(Ut(i,x+2,y,z)+Ut(i,x-2,y,z))  &
+                          +dfilt4(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                          +dfilt4(0)*Ut(i,x,y,z) )
+   x=nx+2
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx2*                        &
+                         ( dfilt2(1)*(Ut(i,x+1,y,z)+Ut(i,x-1,y,z))  &
+                          +dfilt2(0)*Ut(i,x,y,z) )
+   x=nx+3
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfx1*0.5*(Ut(i,x,y,z)-Ut(i,x-1,y,z))
+
+      end do
       end do
    end do
 !$OMP end DO nowait
@@ -3828,18 +3662,11 @@ subroutine filtragex_sup
 !$OMP DO  collapse(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=-2,1
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
-enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO  collapse(2)
-  do z=zfmin_x,zfmax_x
-     do y=yfmin_x,yfmax_x
-!$OMP SIMD 
+
         do x=nx,nx+3
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -3869,107 +3696,54 @@ subroutine filtragey_sup
    integer :: x,y,z,i,j
 !
 !
-!// Points hauts (y=ny; y=ny+1; y=ny+2)
+
 !
 !
-   y=ny
+
 !$OMP DO  !collapse(2)
       do z=zfmin_y,zfmax_y
 !$OMP SIMD 
          do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy6*                         &
-                          ( dfilt6(3)*(Ut(:,x,y+3,z)+Ut(:,x,y-3,z))  &
-                           +dfilt6(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
-                           +dfilt6(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
-                           +dfilt6(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   y=ny+1
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy4*                        &
-                         ( dfilt4(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
-                          +dfilt4(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
-                          +dfilt4(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   y=ny+2
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy2*                        &
-                         ( dfilt2(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
-                          +dfilt2(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   y=ny+3
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy1*0.5*(Ut(:,x,y,z)-Ut(:,x,y-1,z))
-      end do
-   end do
-!$OMP end DO nowait
-!
-!
+         do i=1,5
 !// Points bas (y=1; y=0; y=-1)
-!
-!
-   y=1
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy6*                         &
-                          ( dfilt6(3)*(Ut(:,x,y+3,z)+Ut(:,x,y-3,z))  &
-                           +dfilt6(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
-                           +dfilt6(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
-                           +dfilt6(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   y=0
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy4*                        &
-                         ( dfilt4(2)*(Ut(:,x,y+2,z)+Ut(:,x,y-2,z))  &
-                          +dfilt4(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
-                          +dfilt4(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   y=-1
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy2*                        &
-                         ( dfilt2(1)*(Ut(:,x,y+1,z)+Ut(:,x,y-1,z))  &
-                          +dfilt2(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
    y=-2
-!$OMP DO  !collapse(2)
-      do z=zfmin_y,zfmax_y
-!$OMP SIMD 
-         do x=xfmin_y,xfmax_y
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfy1*0.5*(Ut(:,x,y,z)-Ut(:,x,y+1,z))
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y+1,z))
+   y=-1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*                        &
+                         ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                          +dfilt2(0)*Ut(i,x,y,z) )
+   y=0
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*                        &
+                         ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                          +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                          +dfilt4(0)*Ut(i,x,y,z) )
+   y=1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*                         &
+                          ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
+                           +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                           +dfilt6(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                           +dfilt6(0)*Ut(i,x,y,z) )
+
+!// Points hauts (y=ny; y=ny+1; y=ny+2)
+
+   y=ny
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy6*                         &
+                          ( dfilt6(3)*(Ut(i,x,y+3,z)+Ut(i,x,y-3,z))  &
+                           +dfilt6(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                           +dfilt6(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                           +dfilt6(0)*Ut(i,x,y,z) )
+   y=ny+1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy4*                        &
+                         ( dfilt4(2)*(Ut(i,x,y+2,z)+Ut(i,x,y-2,z))  &
+                          +dfilt4(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                          +dfilt4(0)*Ut(i,x,y,z) )
+   y=ny+2
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy2*                        &
+                         ( dfilt2(1)*(Ut(i,x,y+1,z)+Ut(i,x,y-1,z))  &
+                          +dfilt2(0)*Ut(i,x,y,z) )
+   y=ny+3
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfy1*0.5*(Ut(i,x,y,z)-Ut(i,x,y-1,z))
+      end do
       end do
    end do
 !$OMP end DO nowait
@@ -3982,11 +3756,6 @@ subroutine filtragey_sup
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
 enddo
-enddo
-!$OMP end DO nowait
-!$OMP BARRIER
-!$OMP DO  collapse(2)
-  do z=zfmin_y,zfmax_y
      do y=ny,ny+3
 !$OMP SIMD 
         do x=xfmin_y,xfmax_y
@@ -4018,106 +3787,55 @@ subroutine filtragez_sup
    integer :: x,y,z,i,j
 !
 !
-!// Points avant (z=nz; z=nz+1; z=nz+2)
+
 !
 !
-   z=nz
+
 !$OMP DO  !collapse(2)
       do y=yfmin_z,yfmax_z
 !$OMP SIMD 
          do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz6*                         &
-                          ( dfilt6(3)*(Ut(:,x,y,z+3)+Ut(:,x,y,z-3))  &
-                           +dfilt6(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
-                           +dfilt6(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
-                           +dfilt6(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   z=nz+1
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz4*                        &
-                         ( dfilt4(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
-                          +dfilt4(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
-                          +dfilt4(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   z=nz+2
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz2*                        &
-                         ( dfilt2(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
-                          +dfilt2(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   z=nz+3
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz1*0.5*(Ut(:,x,y,z)-Ut(:,x,y,z-1))
-         end do
-   end do
-!$OMP end DO nowait
-!
+         do i=1,5
 !// Points arrieres (z=1; z=0; z=-1)
 !
-!
-   z=1
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz6*                         &
-                          ( dfilt6(3)*(Ut(:,x,y,z+3)+Ut(:,x,y,z-3))  &
-                           +dfilt6(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
-                           +dfilt6(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
-                           +dfilt6(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   z=0
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz4*                        &
-                         ( dfilt4(2)*(Ut(:,x,y,z+2)+Ut(:,x,y,z-2))  &
-                          +dfilt4(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
-                          +dfilt4(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
-   z=-1
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz2*                        &
-                         ( dfilt2(1)*(Ut(:,x,y,z+1)+Ut(:,x,y,z-1))  &
-                          +dfilt2(0)*Ut(:,x,y,z) )
-      end do
-   end do
-!$OMP end DO nowait
-!
    z=-2
-!$OMP DO  !collapse(2)
-      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
-         do x=xfmin_z,xfmax_z
-            Un(:,x,y,z) = Ut(:,x,y,z) - cfz1*0.5*(Ut(:,x,y,z)-Ut(:,x,y,z+1))
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z+1))
+   z=-1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*                        &
+                         ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                          +dfilt2(0)*Ut(i,x,y,z) )
+   z=0
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*                        &
+                         ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                          +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                          +dfilt4(0)*Ut(i,x,y,z) )
+   z=1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*                         &
+                          ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
+                           +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                           +dfilt6(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                           +dfilt6(0)*Ut(i,x,y,z) )
+
+!// Points avant (z=nz; z=nz+1; z=nz+2)
+
+   z=nz
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz6*                         &
+                          ( dfilt6(3)*(Ut(i,x,y,z+3)+Ut(i,x,y,z-3))  &
+                           +dfilt6(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                           +dfilt6(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                           +dfilt6(0)*Ut(i,x,y,z) )
+   z=nz+1
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz4*                        &
+                         ( dfilt4(2)*(Ut(i,x,y,z+2)+Ut(i,x,y,z-2))  &
+                          +dfilt4(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                          +dfilt4(0)*Ut(i,x,y,z) )
+   z=nz+2
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz2*                        &
+                         ( dfilt2(1)*(Ut(i,x,y,z+1)+Ut(i,x,y,z-1))  &
+                          +dfilt2(0)*Ut(i,x,y,z) )
+   z=nz+3
+            Un(i,x,y,z) = Ut(i,x,y,z) - cfz1*0.5*(Ut(i,x,y,z)-Ut(i,x,y,z-1))
+      end do
       end do
    end do
 !$OMP end DO nowait
@@ -4143,10 +3861,10 @@ subroutine fluxes
   integer :: x,y,z
   !
   !
-!$OMP DO  collapse(3)
+!$OMP DO  collapse(2)
   do z=-2,nz+3
      do y=-2,ny+3
-!!$OMP SIMD 
+!$OMP SIMD 
         do x=-2,nx+3
   E(1,x,y,z) = uo(x,y,z)*Un(1,x,y,z)+Un(2,x,y,z)
   E(2,x,y,z) = uo(x,y,z)*Un(2,x,y,z)+Un(5,x,y,z)
@@ -4671,8 +4389,8 @@ subroutine sauveparametre
   write(500) nx
   write(500) ny
   write(500) nz
-  write(500) nymin
-  write(500) nymax
+  write(500) 0
+  write(500) 0
   write(500) nt0
   write(500) ntfin
   write(500) record_step
@@ -4798,12 +4516,11 @@ subroutine calculvort
   integer :: x,y,z,j
   !
   !
-  VORT=0.
 !$OMP DO  collapse(2)
   do z=1,nz
      do y=1,ny
-!$OMP SIMD 
         do x=1,nx
+!$OMP SIMD 
            do j=-3,3
               VORT(1,x,y,z) = VORT(1,x,y,z) + dyg(y)*a(j)*U(4,x,y+j,z)          &
                                             - dzg(z)*a(j)*U(3,x,y,z+j)
@@ -4982,7 +4699,7 @@ subroutine coeff_schemas
   !
   !// SCHEMAS DE RUNGE-KUTTA
   !
-  !    - numrk : choix du schema de Runge-Kutta
+  !    - nrk : choix du schema de Runge-Kutta
   !            = 1 : RK ordre 4 (lineaire)
   !            = 2 : RK ordre 2 Hu et al.
   !            = 3 : RK ordre 2 Bogey
@@ -5011,6 +4728,20 @@ subroutine coeff_schemas
      ck(4) = 0.333116
      ck(5) = 1./2.
   end if
+
+
+
+  ax(-3:-1   , 0)=-a(3:1:-1) ; ax(  0     , 0)= 0.  ; ax(1:3    , 0)= a(1:3)
+  ay(-3:-1   , 0)=-a(3:1:-1) ; ay(  0     , 0)= 0.  ; ay(1:3    , 0)= a(1:3) ! Rearangement des coeffs
+  az(-3:-1   , 0)=-a(3:1:-1) ; az(  0     , 0)= 0.  ; az(1:3    , 0)= a(1:3)
+  ax(  :     , 1)= a24       ; ax(  :     , 2)= a15 ; ax( :     , 3)= a06
+  ay(  :     , 1)= a24       ; ay(  :     , 2)= a15 ; ay( :     , 3)= a06
+  az(  :     , 1)= a24       ; az(  :     , 2)= a15 ; az( :     , 3)= a06
+  ax( 3:-3:-1,-1)=-a24       ; ax( 3:-3:-1,-2)=-a15 ; ax(3:-3:-1,-3)=-a06
+  ay( 3:-3:-1,-1)=-a24       ; ay( 3:-3:-1,-2)=-a15 ; ay(3:-3:-1,-3)=-a06
+  az( 3:-3:-1,-1)=-a24       ; az( 3:-3:-1,-2)=-a15 ; az(3:-3:-1,-3)=-a06
+
+
   !
   !
 end subroutine coeff_schemas
