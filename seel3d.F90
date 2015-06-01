@@ -115,7 +115,7 @@ end module mod_record
 !
 !******************************************************************
 !******************************************************************
-program seel2d
+program seel3d
   !
   !***** Programme principal
   !******************************************************************
@@ -130,25 +130,32 @@ program seel2d
 integer :: Time_1,clock_rate,Time_2
   !
   call setcas
-  call inivar
+  call allocvar
   call coeff_schemas
   call maillage
+!$OMP parallel
+  call inivar
   call ecoulmoyen
   call pastemps
+!$OMP single
   call affichage
   !
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
   call system_clock(Time_1,clock_rate)
+!$OMP end single
   call integ
+!$OMP single
   CALL system_clock(Time_2)
   print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate
-  call record_for_restart   
-  call closevar
+  call record_for_restart 
   write(6,*) '////////////////////////// FIN PROGRAMME ///////////////////////////'
+!$OMP end single
+!$OMP end parallel  
+  call closevar
   !
   stop
   !
-end program seel2d
+end program seel3d
 !******************************************************************
 !
 !
@@ -222,9 +229,9 @@ subroutine setcas
   !
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=101
-     ny=101
-     nz=101
+     nx=26!101
+     ny=26!101
+     nz=26!101
      ntfin=200
      record_step=500
      mo=0.5
@@ -373,45 +380,116 @@ subroutine ecoulmoyen
 
   gamma=1.4
   rgp=286.8875
-  gradient=.true.
+  gradient=.false.
   !
   !///// ECOULEMENT MOYEN SI NECESSAIRE PAR DEFAUT
   !
-  rhoo=1./1.
-  uo=mo
-  vo=0.
-  wo=0.
-  po=1./gamma
-  coo=1.
+!$OMP DO  
+  do z=-2,nz+3
+    rhoo(:,:,z)=1./1.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    uo(:,:,z)=mo
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    vo(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    wo(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    po(:,:,z)=1./gamma
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    coo(:,:,z)=1.
+enddo
+!$OMP end DO nowait
   !
-  duox=0.
-  duoy=0.
-  duoz=0.
+!$OMP DO  
+  do z=-2,nz+3
+    duox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    duoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    duoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
   !
-  dvox=0.
-  dvoy=0.
-  dvoz=0.
+!$OMP DO  
+  do z=-2,nz+3
+    dvox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dvoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dvoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
   !
-  dwox=0.
-  dwoy=0.
-  dwoz=0.
+!$OMP DO  
+  do z=-2,nz+3
+    dwox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dwoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dwoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
   !
-  dpox=0.
-  dpoy=0.
-  dpoz=0.
-  !
-  gradient=.false.
-  uo=mo
+!$OMP DO  
+  do z=-2,nz+3
+    dpox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dpoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dpoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
   !
   !
   !///// CALCUL NUMERIQUE DES GRADIENTS MOYENS
   !             (en chantier...)
   !
+!$OMP BARRIER
   if (gradient) then
      write(6,*) ' .. calcul numerique des gradients de vitesse '
-     do x=1,nx
-        do y=1,ny
+!$OMP DO
            do z=1,nz
+        do y=1,ny
+     do x=1,nx
               do i=-3,3
                  duox(x,y,z) = duox(x,y,z) + dxg(x)*a(i)*uo(x+i,y,z)
                  duoy(x,y,z) = duoy(x,y,z) + dyg(y)*a(i)*uo(x,y+i,z)
@@ -428,10 +506,12 @@ subroutine ecoulmoyen
            end do
         end do
      end do
+!$OMP end DO nowait
      !
-     do x=-2,0
-        do y=1,ny
+!$OMP DO
            do z=1,nz
+        do y=1,ny
+     do x=-2,0
               duox(x,y,z) =duox(1,y,z)
               duoy(x,y,z) =duoy(1,y,z)
               duoz(x,y,z) =duoz(1,y,z)
@@ -446,10 +526,13 @@ subroutine ecoulmoyen
            end do
         end do
      end do
+!$OMP end DO nowait
      !
-     do x=nx+1,nx+3
-        do y=1,ny
+!$OMP DO
            do z=1,nz
+        do y=1,ny
+     do x=nx+1,nx+3
+
               duox(x,y,z) =duox(nx,y,z)
               duoy(x,y,z) =duoy(nx,y,z)
               duoz(x,y,z) =duoz(nx,y,z)
@@ -464,6 +547,8 @@ subroutine ecoulmoyen
            end do
         end do
      end do
+!$OMP end DO nowait
+!$OMP BARRIER
 
   end if
   !
@@ -534,8 +619,6 @@ subroutine integ
   !
   call sauveparametre
   !
-!$OMP PARALLEL 
-
 
 !/// NON NECESSAIRE
 #ifdef _OPENMP
@@ -621,8 +704,9 @@ enddo
 !$OMP BARRIER
      time=time+deltat
   end do
-!$OMP END PARALLEL
+!$OMP single
   print*,U(:,5,5,5)
+!$OMP end single
   !
   !
 end subroutine integ
@@ -634,6 +718,285 @@ end subroutine integ
 !******************************************************************
 !******************************************************************
 subroutine inivar
+  !
+  !***** Initialisation des tableaux de travail et champs initiaux
+  !******************************************************************
+  !******************************************************************
+  use mod_condlim
+  use mod_options
+  use mod_scales
+  use mod_onde
+  use mod_vectors
+  use mod_record
+  use mod_grille
+  implicit none
+  integer :: x,y,z
+  integer :: nt0_save, ntfin_save, irun_save, irecord_save
+  real :: time_save
+  !
+  !
+  !///// ALLOCATIONS MEMOIRE
+  !
+  ! 
+  if(o_record_vort) then
+!$OMP DO  
+  do z=-2,nz+3
+    VORT(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+  end if
+  !
+  !
+  !///// INITIALISATION ECOULEMENT MOYEN
+  !
+  !
+!$OMP DO  
+  do z=-2,nz+3
+    duox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    duoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    duoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+  !
+!$OMP DO  
+  do z=-2,nz+3
+    dvox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dvoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dvoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+  !
+!$OMP DO  
+  do z=-2,nz+3
+    dwox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dwoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dwoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+  !
+!$OMP DO  
+  do z=-2,nz+3
+    dpox(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dpoy(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    dpoz(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+  !
+!$OMP DO  
+  do z=-2,nz+3
+    rhoo(:,:,z)=HUGE(1.)
+enddo
+!$OMP end DO nowait
+
+!$OMP DO  
+  do z=-2,nz+3
+    uo(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    vo(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    wo(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    po(:,:,z)=0.
+enddo
+!$OMP end DO nowait
+  !
+  !
+  !///// INITIALISATION DES TABLEAUX DE VARIABLES
+  !
+  !
+  if(o_restart) then
+!OMP single
+     write(6,*) '***'
+     write(6,*) '*** LECTURE D''UN FICHIER RESTART ***'
+     write(6,*) '***'
+     write(6,*) 'Fichier lu: ', filename_load_restart
+     open(507,file=filename_load_restart,form='unformatted',status='unknown')
+     read(507) read_dummy
+     write(6,*) '   check: read_dummy=', read_dummy
+     read(507) nt0_save
+     read(507) ntfin_save
+     read(507) irun_save
+     read(507) irecord_save
+     read(507) time_save
+     read(507) read_dummy
+     write(6,*) '   check: read_dummy=', read_dummy
+     read(507) (((U(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) (((U(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
+     read(507) read_dummy
+     write(6,*) '   check: read_dummy=', read_dummy
+     close(507)
+!OMP end single
+     !
+     irun=irun_save+1
+     nt0=ntfin_save+1
+     ntfin=ntfin+ntfin_save+1
+     irecord=irecord_save
+     time=time_save
+!$OMP DO  
+  do z=-2,nz+3
+    Un(:,:,:,z)=U(:,:,:,z)
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    Ut(:,:,:,z)=U(:,:,:,z)
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    E(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    F(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    G(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    H(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    S(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+27   format(A39,I4)
+!OMP single
+     write(6,27) ' Numero pas temporel debut       nt0 = ',nt0
+     write(6,27) ' Numero pas temporel fin       ntfin = ',ntfin
+     write(6,27) ' Numero pas temporel fin        irun = ',irun
+     write(6,*) '***'
+     write(6,*) '***'
+!OMP end single
+  else
+     nt0=0
+     time=0
+!$OMP DO  
+  do z=-2,nz+3
+    U(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    Un(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    Ut(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    E(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    F(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    G(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    H(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+!$OMP DO  
+  do z=-2,nz+3
+    S(:,:,:,z)=0.
+enddo
+!$OMP end DO nowait
+
+  endif
+  !
+  !
+  !
+  !
+  !///// ALLOCATIONS MEMOIRE TABLEAUX POUR ENREGISTREMENT
+  !
+  !
+  nxrect=2
+  nyrect=2
+  nzrect=2
+
+  rect=0
+
+  xrect(1)=(nx+1)/2+10
+  yrect(1)=(ny+1)/2+10
+  zrect(1)=(nz+1)/2+10
+  xrect(2)=nx
+  yrect(2)=ny
+  zrect(2)=nz
+
+!$OMP BARRIER
+  !
+  !
+end subroutine inivar
+!******************************************************************
+!
+!
+!
+!
+!
+!******************************************************************
+!******************************************************************
+subroutine allocvar
   !
   !***** Initialisation des tableaux de travail et champs initiaux
   !******************************************************************
@@ -695,121 +1058,17 @@ subroutine inivar
   ! 
   if(o_record_vort) then
      allocate(VORT(3,-2:nx+3,-2:ny+3,-2:nz+3))
-     VORT=0.
   end if
-  !
-  !
-  !///// INITIALISATION ECOULEMENT MOYEN
-  !
-  !
-  duox=0.
-  duoy=0.
-  duoz=0.
-  !
-  dvox=0.
-  dvoy=0.
-  dvoz=0.
-  !
-  dwox=0.
-  dwoy=0.
-  dwoz=0.
-  !
-  dpox=0.
-  dpoy=0.
-  dpoz=0.
-  !
-  rhoo=HUGE(1.)
-  uo=0.
-  vo=0.
-  wo=0.
-  po=0.
-  !
-  !
-  !///// INITIALISATION DES TABLEAUX DE VARIABLES
-  !
-  !
-  if(o_restart) then
-     write(6,*) '***'
-     write(6,*) '*** LECTURE D''UN FICHIER RESTART ***'
-     write(6,*) '***'
-     write(6,*) 'Fichier lu: ', filename_load_restart
-     open(507,file=filename_load_restart,form='unformatted',status='unknown')
-     read(507) read_dummy
-     write(6,*) '   check: read_dummy=', read_dummy
-     read(507) nt0_save
-     read(507) ntfin_save
-     read(507) irun_save
-     read(507) irecord_save
-     read(507) time_save
-     read(507) read_dummy
-     write(6,*) '   check: read_dummy=', read_dummy
-     read(507) (((U(1,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(507) (((U(2,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(507) (((U(3,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(507) (((U(4,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(507) (((U(5,x,y,z),x=-2,nx+3),y=-2,ny+3),z=-2,nz+3)
-     read(507) read_dummy
-     write(6,*) '   check: read_dummy=', read_dummy
-     close(507)
-     !
-     irun=irun_save+1
-     nt0=ntfin_save+1
-     ntfin=ntfin+ntfin_save+1
-     irecord=irecord_save
-     time=time_save
-     Un=U
-     Ut=U
-     E=0
-     F=0
-     G=0
-     H=0
-     S=0
-27   format(A39,I4)
-     write(6,27) ' Numero pas temporel debut       nt0 = ',nt0
-     write(6,27) ' Numero pas temporel fin       ntfin = ',ntfin
-     write(6,27) ' Numero pas temporel fin        irun = ',irun
-     write(6,*) '***'
-     write(6,*) '***'
-
-  else
-     U=0
-     Un=0
-     Ut=0
-     E=0
-     F=0
-     G=0
-     H=0
-     S=0
-     nt0=0
-     time=0
-  endif
-  !
-  !
-  !
-  !
-  !///// ALLOCATIONS MEMOIRE TABLEAUX POUR ENREGISTREMENT
-  !
-  !
   nxrect=2
   nyrect=2
   nzrect=2
 
   allocate(rect(nt0:ntfin,1:nxrect,1:nyrect,1:nzrect,1:5))      !! temps / x / y / z / numero_champ
-  rect=0
-
   allocate(xrect(1:nxrect))
   allocate(yrect(1:nyrect))
   allocate(zrect(1:nzrect))
 
-  xrect(1)=(nx+1)/2+10
-  yrect(1)=(ny+1)/2+10
-  zrect(1)=(nz+1)/2+10
-  xrect(2)=nx
-  yrect(2)=ny
-  zrect(2)=nz
-  !
-  !
-end subroutine inivar
+end subroutine allocvar
 !******************************************************************
 !
 !
