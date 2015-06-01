@@ -644,34 +644,34 @@ enddo
          call fluxes
          call ptsint(irk)
          !// FACES
-	 call ptsright(irk,ibc_right)
-	 call ptsleft(irk)
-	 call ptsbot(irk)
-	 call ptstop(irk)
-	 call ptsfront(irk)
-	 call ptsback(irk)
+      call ptsright(irk,ibc_right)
+      call ptsleft(irk)
+      call ptsbot(irk)
+      call ptstop(irk)
+      call ptsfront(irk)
+      call ptsback(irk)
          !// ARRETES
-	 call ptsbottomfront(irk)
-	 call ptsbottomleft(irk)
-	 call ptsleftfront(irk)
-	 call ptsbottomright(irk)
-	 call ptstopleft(irk)
-	 call ptstopfront(irk)
-	 call ptsrightfront(irk)
-	 call ptsbottomback(irk)
-	 call ptsleftback(irk)
-	 call ptstopback(irk)
-	 call ptsrightback(irk)
-	 call ptstopright(irk)
+      call ptsbottomfront(irk)
+      call ptsbottomleft(irk)
+      call ptsleftfront(irk)
+      call ptsbottomright(irk)
+      call ptstopleft(irk)
+      call ptstopfront(irk)
+      call ptsrightfront(irk)
+      call ptsbottomback(irk)
+      call ptsleftback(irk)
+      call ptstopback(irk)
+      call ptsrightback(irk)
+      call ptstopright(irk)
          !// COINS
-	 call pts_c_toprightfront(irk)
-	 call pts_c_toprightback(irk)
-	 call pts_c_bottomrightfront(irk)
-	 call pts_c_bottomrightback(irk)
-	 call pts_c_topleftfront(irk)
-	 call pts_c_topleftback(irk)
-	 call pts_c_bottomleftfront(irk)
-	 call pts_c_bottomleftback(irk)
+      call pts_c_toprightfront(irk)
+      call pts_c_toprightback(irk)
+      call pts_c_bottomrightfront(irk)
+      call pts_c_bottomrightback(irk)
+      call pts_c_topleftfront(irk)
+      call pts_c_topleftback(irk)
+      call pts_c_bottomleftfront(irk)
+      call pts_c_bottomleftback(irk)
 !
 !$OMP DO 
   do z=-2,nz+3
@@ -1162,7 +1162,7 @@ subroutine set_champ(itime)
 !$OMP DO COLLAPSE(2)
         do z=1,nz
            do y=1,ny
-!$OMP SIMD PRIVATE(arg)
+!!$OMP SIMD PRIVATE(arg)
               do x=1,nx
                  arg = (xg(x)+0.)**2 + yg(y)**2 + zg(z)**2
                  U(1,x,y,z) = amp * exp( - alpha*arg )
@@ -1202,7 +1202,7 @@ subroutine ptsint(irk)
 !$OMP DO COLLAPSE(2)
      do z=1,nz
         do y=1,ny
-!$OMP SIMD PRIVATE(ddx,ddy,ddz,cc)
+!!$OMP SIMD PRIVATE(ddx,ddy,ddz,cc)
            do x=1,nx
              do i=1,5
               DDx = a(3)*(E(i,x+3,y,z) - E(i,x-3,y,z))    &
@@ -1263,12 +1263,12 @@ dirx=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1279,16 +1279,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1365,12 +1365,12 @@ dirx=-1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1381,16 +1381,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1407,7 +1407,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1453,12 +1453,12 @@ dirx=0
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1469,16 +1469,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1495,7 +1495,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1541,12 +1541,12 @@ dirx=0
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1557,16 +1557,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1583,7 +1583,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1630,12 +1630,12 @@ dirx=0
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1646,16 +1646,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1672,7 +1672,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1719,12 +1719,12 @@ dirx=0
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1735,16 +1735,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1761,7 +1761,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1808,12 +1808,12 @@ dirx=-1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1824,16 +1824,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1850,7 +1850,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1897,12 +1897,12 @@ dirx=0
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -1913,16 +1913,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -1939,7 +1939,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -1986,12 +1986,12 @@ dirx=-1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2002,16 +2002,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2028,7 +2028,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2076,12 +2076,12 @@ dirx=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2092,16 +2092,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2118,7 +2118,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2166,12 +2166,12 @@ dirx=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2182,16 +2182,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2208,7 +2208,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2255,12 +2255,12 @@ dirx=-1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2271,16 +2271,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2297,7 +2297,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2345,12 +2345,12 @@ dirx=0
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2361,16 +2361,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2387,7 +2387,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2435,12 +2435,12 @@ dirx=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2451,16 +2451,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2477,7 +2477,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2524,12 +2524,12 @@ dirx=1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2540,16 +2540,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2566,7 +2566,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2613,12 +2613,12 @@ dirx=-1
          y3=y ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2629,16 +2629,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2655,7 +2655,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2702,12 +2702,12 @@ dirx=0
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2718,16 +2718,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2744,7 +2744,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !      
          end do
@@ -2791,12 +2791,12 @@ dirx=0
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=x
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2807,16 +2807,16 @@ dirx=0
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2833,7 +2833,7 @@ dirx=0
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -2880,12 +2880,12 @@ dirx=-1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2896,16 +2896,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -2922,10 +2922,10 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
-	 end do
+      end do
       end do
    end do
 !$OMP END DO
@@ -2969,12 +2969,12 @@ dirx=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -2985,16 +2985,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3011,7 +3011,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -3058,12 +3058,12 @@ dirx=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -3074,16 +3074,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3100,7 +3100,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -3147,12 +3147,12 @@ dirx=-1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -3163,16 +3163,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3189,10 +3189,10 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
-	    end do
+         end do
           end do
         end do
 !$OMP END DO NOWAIT
@@ -3236,12 +3236,12 @@ dirx=-1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -3252,16 +3252,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3278,7 +3278,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -3326,12 +3326,12 @@ dirx=1
          y3=1 ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -3342,16 +3342,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3368,7 +3368,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -3415,12 +3415,12 @@ dirx=1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=nx
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -3431,16 +3431,16 @@ dirx=1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3457,7 +3457,7 @@ dirx=1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -3504,12 +3504,12 @@ dirx=-1
          y3=ny ! x3,y3 et z3 permettent de gerer le decentrement
          x3=1
 !
-	    xc = xg(x) - xg(nxray)
-	    yc = yg(y) - yg(nyray)
-	    zc = zg(z) - zg(nzray)
+         xc = xg(x) - xg(nxray)
+         yc = yg(y) - yg(nyray)
+         zc = zg(z) - zg(nzray)
 !
              r  =1./sqrt(xc**2 + yc**2 + zc**2)
-	    r2d= sqrt(xc**2 + yc**2) 
+         r2d= sqrt(xc**2 + yc**2) 
              costheta =  zc*r
              sintheta = r2d*r
             if(r2d.ne.0) then
@@ -3520,16 +3520,16 @@ dirx=-1
                sinphi=1.                     !Donc peu importe la valeur (finie) de cosphi et sinphi.
             end if
 !
-	    xc = sintheta*cosphi
-	    yc = sintheta*sinphi
-	    zc = costheta
+         xc = sintheta*cosphi
+         yc = sintheta*sinphi
+         zc = costheta
 !
             uer     =  uo(x,y,z)*xc + vo(x,y,z)*yc + wo(x,y,z)*zc
              uetheta =  (uo(x,y,z)*cosphi + vo(x,y,z)*sinphi)*costheta - wo(x,y,z)*sintheta
              uephi   =   vo(x,y,z)*cosphi - uo(x,y,z)*sinphi
             vray=uer+ sqrt(coo(x,y,z)**2 -uetheta**2 -uephi**2)
 !
-!$OMP SIMD
+!!$OMP SIMD
          do k=1,5
            Dx(k)=0.
            Dy(k)=0.
@@ -3546,7 +3546,7 @@ dirx=-1
            Dz(k) = Dz(k)* dxg(z)
            DD(k) = vray * (xc*Dx(k) + yc*Dy(k)  + zc*Dz(k)  + Un(k,x,y,z)*r)
 !
-	      Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
+           Ut(k,x,y,z) = U(k,x,y,z) - DD(k)*deltat*rk(irk)
          enddo
 !
          end do
@@ -3594,7 +3594,7 @@ subroutine filtrage8x
 !$OMP DO COLLAPSE(2)
   do z=zfmin_x,zfmax_x
      do y=yfmin_x,yfmax_x
-!$OMP SIMD
+!!$OMP SIMD
         do x=xfmin_x,xfmax_x
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -3643,7 +3643,7 @@ subroutine filtrage8y
 !$OMP DO COLLAPSE(2)
   do z=zfmin_y,zfmax_y
      do y=yfmin_y,yfmax_y
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -3692,7 +3692,7 @@ subroutine filtrage8z
 !$OMP DO COLLAPSE(2)
   do z=zfmin_z,zfmax_z
      do y=yfmin_z,yfmax_z
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=xfmin_z,xfmax_z
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -3724,7 +3724,7 @@ subroutine filtragex_sup
 
 !$OMP DO
       do z=zfmin_x,zfmax_x
-!$OMP SIMD 
+!!$OMP SIMD 
          do y=yfmin_x,yfmax_x
           do i=1,5
 
@@ -3813,7 +3813,7 @@ subroutine filtragey_sup
 
 !$OMP DO
       do z=zfmin_y,zfmax_y
-!$OMP SIMD 
+!!$OMP SIMD 
          do x=xfmin_y,xfmax_y
          do i=1,5
 !// Points bas (y=1; y=0; y=-1)
@@ -3861,13 +3861,13 @@ subroutine filtragey_sup
 !$OMP DO COLLAPSE(2)
   do z=zfmin_y,zfmax_y
      do y=-2,1
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
 enddo
      do y=ny,ny+3
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=xfmin_y,xfmax_y
         Ut(:,x,y,z)=Un(:,x,y,z)
 enddo
@@ -3902,7 +3902,7 @@ subroutine filtragez_sup
 
 !$OMP DO
       do y=yfmin_z,yfmax_z
-!$OMP SIMD 
+!!$OMP SIMD 
          do x=xfmin_z,xfmax_z
          do i=1,5
 !// Points arrieres (z=1; z=0; z=-1)
@@ -3972,7 +3972,7 @@ subroutine fluxes
 !$OMP DO COLLAPSE(2)
   do z=-2,nz+3
      do y=-2,ny+3
-!$OMP SIMD 
+!!$OMP SIMD 
         do x=-2,nx+3
   E(1,x,y,z) = uo(x,y,z)*Un(1,x,y,z)+Un(2,x,y,z)
   E(2,x,y,z) = uo(x,y,z)*Un(2,x,y,z)+Un(5,x,y,z)
@@ -4040,7 +4040,7 @@ subroutine ts(irk)
 !$OMP DO COLLAPSE(2)
      do z=-2,nz+3
         do y=-2,ny+3
-!$OMP SIMD 
+!!$OMP SIMD 
            do x=-2,nx+3   
               S(1,x,y,z) = amp * sin(omega*(time+ck(irk)*deltat)) &
                                * exp(-alpha*(xg(x)**2 + yg(y)**2 + zg(z)**2))                
@@ -4627,7 +4627,7 @@ subroutine calculvort
   do z=1,nz
      do y=1,ny
         do x=1,nx
-!$OMP SIMD 
+!!$OMP SIMD 
            do j=-3,3
               VORT(1,x,y,z) = VORT(1,x,y,z) + dyg(y)*a(j)*U(4,x,y+j,z)          &
                                             - dzg(z)*a(j)*U(3,x,y,z+j)
