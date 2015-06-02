@@ -127,7 +127,7 @@ program seel3d
   use mod_onde
   use mod_vectors
   implicit none
-  integer :: Time_1,clock_rate,Time_2
+  integer :: Time_1,clock_rate,Time_2,ntime
   !
   call setcas
   call allocvar
@@ -143,10 +143,10 @@ program seel3d
   write(6,*) '////////////////////////// DEBUT INTEGRATION ///////////////////////'
   call system_clock(Time_1,clock_rate)
   !$OMP END SINGLE NOWAIT
-  call integ
+  call integ(Time_1,clock_rate,Time_2,ntime)
   !$OMP SINGLE
   CALL system_clock(Time_2)
-  print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate
+  print*,'TEMPS DE CALCUL ',(Time_2-Time_1)*1./clock_rate/ntime
   call record_for_restart 
   write(6,*) '////////////////////////// FIN PROGRAMME ///////////////////////////'
   !$OMP END SINGLE NOWAIT
@@ -178,6 +178,7 @@ subroutine setcas
   use mod_record
   !
   implicit none
+character(len=10)::parm
   !
   !
   !!///// CONDITIONS PAR DEFAUT
@@ -227,12 +228,14 @@ subroutine setcas
   !///// CONDITIONS MODIFIEES EN FONCTION DU CAS ETUDIE
   !
   !
+call getarg(1,parm)
+read(parm,*)nx
   !!///// Pulse de pression avec ou sans ecoulement
   if (icas==100) then
-     nx=101
-     ny=101
-     nz=101
-     ntfin=200
+!     nx=112
+     ny=nx
+     nz=nx
+     ntfin=10000
      record_step=500
      mo=0.5
      amp=0.001
@@ -595,7 +598,7 @@ end subroutine pastemps
 !
 !******************************************************************
 !******************************************************************
-subroutine integ
+subroutine integ(Time_1,clock_rate,Time_2,ntime)
   !
   !***** Integration temporelle
   !******************************************************************
@@ -612,10 +615,12 @@ subroutine integ
 #endif
   implicit none
   integer :: itime,irk,z,nt
+  integer :: Time_1,clock_rate,Time_2,ntime
   !
   !
   !$OMP SINGLE
   call sauveparametre
+  ntime=0
   !$OMP END SINGLE NOWAIT
   !
 
@@ -628,7 +633,6 @@ subroutine integ
 #endif
   !/// NON NECESSAIRE
 
-
   !$OMP DO 
   do z=-2,nz+3
      Un(:,:,:,z)=U(:,:,:,z)
@@ -636,7 +640,7 @@ subroutine integ
   !$OMP END DO 
   !
   do itime=nt0,ntfin
-
+ntime=ntime+1
      call set_champ(itime) 
      call record(itime)           
      do irk=1,nrk
@@ -697,6 +701,10 @@ subroutine integ
      enddo
      !$OMP END DO 
      time=time+deltat
+  !$OMP SINGLE
+  CALL system_clock(Time_2)
+  if((Time_2-Time_1)*1./clock_rate>30.) exit
+  !$OMP END SINGLE
   end do
   !$OMP SINGLE
   print*,U(:,5,5,5)
